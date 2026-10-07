@@ -40,3 +40,23 @@ project-module-framework）。本文件是模块归属与依赖方向的**硬约
 3. **验收 = 全量回归**：`py evaluation/run_evaluation.py`（本模块指标 pass + 其他模块无回归）
    + `py -m unittest discover tests` 全绿（含边界测试）
 4. **每模块一个本地 git commit**，commit message 说明修复了哪个缺口、指标变化
+
+## AI 行为准则（代码质量 + 最小改动）
+
+### 最小改动原则（不做多余的事）
+
+- 只改任务要求的文件；重构/重命名/格式化/顺手修复等超范围改动，必须先说明并等确认
+- 不新建文件（含测试/文档），除非任务明确要求
+- 不引入新依赖（pip 包）；确需引入必须显式说明理由
+- 不添加无调用方的函数/类/参数/import（死代码禁令）；确定无用即删除，不留注释掉的代码
+- 不做假设性抽象：三行相似代码好过一个过早的抽象；不为未来需求设计
+
+### 代码质量标准
+
+- 风格跟随现状：pydantic/dataclass 模型、类型注解、`from __future__ import annotations`、中文 docstring
+- 错误处理红线（`tests/test_code_quality.py` 强制）：禁止新增裸 `except: pass` 吞错；
+  异常必须让调用方可见（抛出/结果带 errors|warnings 标记），或显式降级（except 内有 return/赋值/raise）。
+  存量 24 处吞错在各模块修复时逐步清理
+- 不破坏调用方：core 公共函数签名（参数/返回）不改；确需修改标注 `[API-CHANGE]` 并同步全部调用方
+- 不改评测资产：`datasets/`、`gap_checks/`、`run_evaluation.py` 冻结，修复只能改业务代码
+- 注释只在 WHY 非显然时写；不写流水账注释
