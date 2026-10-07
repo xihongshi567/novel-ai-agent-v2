@@ -1,0 +1,3 @@
+[
+  {"id": "invalid_review", "note": "审校返回非 JSON，当前被 or {} 吞掉当作干净通过"}
+]

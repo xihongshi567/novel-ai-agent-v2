@@ -1,0 +1,30 @@
+[
+  {
+    "id": "filter_exact",
+    "plan": {"characters": ["林尘"], "pov": "林尘", "setting": "青云村"},
+    "expected_names": ["林尘", "青云村"],
+    "unrelated_names": ["林霸", "苏沐晴", "皇城"],
+    "note": "精确名过滤，应只包含相关条目"
+  },
+  {
+    "id": "filter_nickname",
+    "plan": {"characters": ["尘儿"], "pov": "尘儿", "setting": "青云村"},
+    "expected_names": ["林尘", "青云村"],
+    "unrelated_names": ["林霸", "苏沐晴", "皇城"],
+    "note": "昵称匹配失败 → related 为空 → 兜底渲染全量设定集（过滤失效，无关条目混入）"
+  },
+  {
+    "id": "filter_other_entity",
+    "plan": {"characters": ["林霸"], "pov": "林霸", "setting": "皇城"},
+    "expected_names": ["林霸", "皇城"],
+    "unrelated_names": ["林尘", "苏沐晴", "青云村"],
+    "note": "对照组：正常应过滤到林霸+皇城"
+  },
+  {
+    "id": "filter_fail_open",
+    "plan": {"characters": ["尘儿"], "pov": "尘儿", "setting": "无名之地"},
+    "expected_names": ["林尘"],
+    "unrelated_names": ["林霸", "苏沐晴", "青云村", "皇城"],
+    "note": "所有名字都匹配失败 → related 为空 → 兜底渲染全量设定集（过滤失效，无关条目全部混入）"
+  }
+]

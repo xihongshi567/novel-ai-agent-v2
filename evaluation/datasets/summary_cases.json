@@ -1,0 +1,14 @@
+[
+  {
+    "id": "entity_head",
+    "entity": "林尘",
+    "placement": "head",
+    "note": "位于正文前 200 字内，content[:200] 兜底能保住"
+  },
+  {
+    "id": "entity_tail",
+    "entity": "赤焰剑",
+    "placement": "tail",
+    "note": "只出现在正文 200 字之后，content[:200] 兜底会永久丢失"
+  }
+]

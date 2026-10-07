@@ -1,18 +1,678 @@
 {
-  "chapter_fit": {
-    "cases": 4,
-    "accuracy": 1.0
-  },
-  "continuity": {
-    "conflict_detection_rate": 1.0,
-    "governance_recovery_rate": 1.0,
-    "provenance_snapshot_consistency": 1.0
-  },
-  "retrieval": {
-    "cases": 20,
-    "baseline": null,
-    "multi_channel": null,
-    "thread_aware": null,
-    "note": "Historical corpus unavailable; no fabricated metrics"
-  }
+  "schema_version": 1,
+  "generated_at": "2026-10-07 23:58:18",
+  "gaps": [
+    {
+      "gap": "name_matching",
+      "metric": "name_resolution_rate",
+      "cases": 8,
+      "value": 0.5,
+      "target": 1.0,
+      "detail": [
+        {
+          "name": "林尘",
+          "expected": "char_linchen",
+          "resolved": "char_linchen",
+          "correct": true,
+          "note": "精确名"
+        },
+        {
+          "name": "林尘（主角）",
+          "expected": "char_linchen",
+          "resolved": "char_linchen",
+          "correct": true,
+          "note": "LLM 常见带注释写法"
+        },
+        {
+          "name": "尘儿",
+          "expected": "char_linchen",
+          "resolved": null,
+          "correct": false,
+          "note": "昵称/小名"
+        },
+        {
+          "name": "尘哥",
+          "expected": "char_linchen",
+          "resolved": null,
+          "correct": false,
+          "note": "称呼式昵称"
+        },
+        {
+          "name": "那个少年",
+          "expected": "char_linchen",
+          "resolved": null,
+          "correct": false,
+          "note": "代词指代（无法匹配，期望修复后仍可解析或明确放弃）"
+        },
+        {
+          "name": "林尘少侠",
+          "expected": "char_linchen",
+          "resolved": "char_linchen",
+          "correct": true,
+          "note": "称号后缀"
+        },
+        {
+          "name": "林霸",
+          "expected": "char_linba",
+          "resolved": "char_linba",
+          "correct": true,
+          "note": "精确名"
+        },
+        {
+          "name": "堂兄",
+          "expected": "char_linba",
+          "resolved": null,
+          "correct": false,
+          "note": "亲属称谓指代"
+        }
+      ],
+      "direction": "max",
+      "status": "fail"
+    },
+    {
+      "gap": "foreshadow_recovery",
+      "metric": "resolution_accuracy",
+      "cases": 4,
+      "value": 0.5,
+      "target": 1.0,
+      "detail": [
+        {
+          "case": "fs_true_positive",
+          "planted": [
+            "林霸在密室埋下毒药"
+          ],
+          "resolved": "林霸在密室埋下的毒药被发现",
+          "expected": [
+            "fs_001"
+          ],
+          "flipped": [
+            "fs_001"
+          ],
+          "correct": true,
+          "note": "强重叠表述，应正确回收"
+        },
+        {
+          "case": "fs_false_negative",
+          "planted": [
+            "林尘的玉佩被林霸抢走"
+          ],
+          "resolved": "林尘从林霸手中夺回玉佩",
+          "expected": [
+            "fs_001"
+          ],
+          "flipped": [],
+          "correct": false,
+          "note": "换词表述（夺回 vs 抢走），当前 _similar 二元组重叠不足会漏回收"
+        },
+        {
+          "case": "fs_wrong_target",
+          "planted": [
+            "林霸将在青云村对付林尘",
+            "林尘将在青云村迎战林霸"
+          ],
+          "resolved": "林尘与林霸在青云村对峙",
+          "expected": [
+            "fs_002"
+          ],
+          "flipped": [
+            "fs_001"
+          ],
+          "correct": false,
+          "note": "两条相似伏笔并存时，先到先得会回收错目标（fs_001 被误回收）"
+        },
+        {
+          "case": "fs_near_miss",
+          "planted": [
+            "古洞中藏着一枚上古玉简"
+          ],
+          "resolved": "上古玉简被毁坏",
+          "expected": [],
+          "flipped": [],
+          "correct": true,
+          "note": "相关但不同事件，不应误回收"
+        }
+      ],
+      "direction": "max",
+      "status": "fail"
+    },
+    {
+      "gap": "foreshadow_recovery",
+      "metric": "resolution_precision",
+      "cases": 4,
+      "value": 0.5,
+      "target": 1.0,
+      "detail": [
+        {
+          "case": "fs_true_positive",
+          "planted": [
+            "林霸在密室埋下毒药"
+          ],
+          "resolved": "林霸在密室埋下的毒药被发现",
+          "expected": [
+            "fs_001"
+          ],
+          "flipped": [
+            "fs_001"
+          ],
+          "correct": true,
+          "note": "强重叠表述，应正确回收"
+        },
+        {
+          "case": "fs_false_negative",
+          "planted": [
+            "林尘的玉佩被林霸抢走"
+          ],
+          "resolved": "林尘从林霸手中夺回玉佩",
+          "expected": [
+            "fs_001"
+          ],
+          "flipped": [],
+          "correct": false,
+          "note": "换词表述（夺回 vs 抢走），当前 _similar 二元组重叠不足会漏回收"
+        },
+        {
+          "case": "fs_wrong_target",
+          "planted": [
+            "林霸将在青云村对付林尘",
+            "林尘将在青云村迎战林霸"
+          ],
+          "resolved": "林尘与林霸在青云村对峙",
+          "expected": [
+            "fs_002"
+          ],
+          "flipped": [
+            "fs_001"
+          ],
+          "correct": false,
+          "note": "两条相似伏笔并存时，先到先得会回收错目标（fs_001 被误回收）"
+        },
+        {
+          "case": "fs_near_miss",
+          "planted": [
+            "古洞中藏着一枚上古玉简"
+          ],
+          "resolved": "上古玉简被毁坏",
+          "expected": [],
+          "flipped": [],
+          "correct": true,
+          "note": "相关但不同事件，不应误回收"
+        }
+      ],
+      "direction": "max",
+      "status": "fail"
+    },
+    {
+      "gap": "foreshadow_recovery",
+      "metric": "resolution_recall",
+      "cases": 4,
+      "value": 0.3333333333333333,
+      "target": 1.0,
+      "detail": [
+        {
+          "case": "fs_true_positive",
+          "planted": [
+            "林霸在密室埋下毒药"
+          ],
+          "resolved": "林霸在密室埋下的毒药被发现",
+          "expected": [
+            "fs_001"
+          ],
+          "flipped": [
+            "fs_001"
+          ],
+          "correct": true,
+          "note": "强重叠表述，应正确回收"
+        },
+        {
+          "case": "fs_false_negative",
+          "planted": [
+            "林尘的玉佩被林霸抢走"
+          ],
+          "resolved": "林尘从林霸手中夺回玉佩",
+          "expected": [
+            "fs_001"
+          ],
+          "flipped": [],
+          "correct": false,
+          "note": "换词表述（夺回 vs 抢走），当前 _similar 二元组重叠不足会漏回收"
+        },
+        {
+          "case": "fs_wrong_target",
+          "planted": [
+            "林霸将在青云村对付林尘",
+            "林尘将在青云村迎战林霸"
+          ],
+          "resolved": "林尘与林霸在青云村对峙",
+          "expected": [
+            "fs_002"
+          ],
+          "flipped": [
+            "fs_001"
+          ],
+          "correct": false,
+          "note": "两条相似伏笔并存时，先到先得会回收错目标（fs_001 被误回收）"
+        },
+        {
+          "case": "fs_near_miss",
+          "planted": [
+            "古洞中藏着一枚上古玉简"
+          ],
+          "resolved": "上古玉简被毁坏",
+          "expected": [],
+          "flipped": [],
+          "correct": true,
+          "note": "相关但不同事件，不应误回收"
+        }
+      ],
+      "direction": "max",
+      "status": "fail"
+    },
+    {
+      "gap": "summary_fidelity",
+      "metric": "summary_entity_recall",
+      "cases": 2,
+      "value": 0.5,
+      "target": 0.9,
+      "detail": [
+        {
+          "fallback": true,
+          "survived_entities": [
+            "林尘"
+          ],
+          "entity_recall": 0.5,
+          "summary_len": 200,
+          "polluted_by_review_note": true,
+          "summary_tail": "土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的"
+        }
+      ],
+      "direction": "max",
+      "status": "fail"
+    },
+    {
+      "gap": "summary_fidelity",
+      "metric": "fallback_rate",
+      "direction": "min",
+      "cases": 1,
+      "value": 1.0,
+      "target": 0.0,
+      "detail": [
+        {
+          "fallback": true,
+          "survived_entities": [
+            "林尘"
+          ],
+          "entity_recall": 0.5,
+          "summary_len": 200,
+          "polluted_by_review_note": true,
+          "summary_tail": "土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的"
+        }
+      ],
+      "status": "fail"
+    },
+    {
+      "gap": "summary_purity",
+      "metric": "summary_purity",
+      "cases": 1,
+      "value": 0.0,
+      "target": 1.0,
+      "detail": [
+        {
+          "fallback": true,
+          "survived_entities": [
+            "林尘"
+          ],
+          "entity_recall": 0.5,
+          "summary_len": 200,
+          "polluted_by_review_note": true,
+          "summary_tail": "土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的"
+        }
+      ],
+      "direction": "max",
+      "status": "fail"
+    },
+    {
+      "gap": "rag_truncation",
+      "metric": "truncation_visibility",
+      "cases": 1,
+      "value": 0.0,
+      "target": 1.0,
+      "detail": [
+        {
+          "chapters": 8,
+          "rag_max_chars": 3500,
+          "hits": 5,
+          "included": 3,
+          "dropped": 2,
+          "visible": false,
+          "coverage": 0.6
+        }
+      ],
+      "direction": "max",
+      "status": "fail"
+    },
+    {
+      "gap": "rag_truncation",
+      "metric": "rag_coverage",
+      "cases": 1,
+      "value": 0.6,
+      "target": 1.0,
+      "detail": [
+        {
+          "chapters": 8,
+          "rag_max_chars": 3500,
+          "hits": 5,
+          "included": 3,
+          "dropped": 2,
+          "visible": false,
+          "coverage": 0.6
+        }
+      ],
+      "direction": "max",
+      "status": "fail"
+    },
+    {
+      "gap": "setting_filter",
+      "metric": "filter_precision",
+      "cases": 4,
+      "value": 0.8,
+      "target": 0.9,
+      "detail": [
+        {
+          "case": "filter_exact",
+          "expected": [
+            "林尘",
+            "青云村"
+          ],
+          "unrelated": [
+            "林霸",
+            "苏沐晴",
+            "皇城"
+          ],
+          "present": [
+            "青云村",
+            "林尘"
+          ],
+          "precision": 1.0,
+          "recall": 1.0,
+          "note": "精确名过滤，应只包含相关条目"
+        },
+        {
+          "case": "filter_nickname",
+          "expected": [
+            "林尘",
+            "青云村"
+          ],
+          "unrelated": [
+            "林霸",
+            "苏沐晴",
+            "皇城"
+          ],
+          "present": [
+            "青云村"
+          ],
+          "precision": 1.0,
+          "recall": 0.5,
+          "note": "昵称匹配失败 → related 为空 → 兜底渲染全量设定集（过滤失效，无关条目混入）"
+        },
+        {
+          "case": "filter_other_entity",
+          "expected": [
+            "林霸",
+            "皇城"
+          ],
+          "unrelated": [
+            "林尘",
+            "苏沐晴",
+            "青云村"
+          ],
+          "present": [
+            "林霸",
+            "皇城"
+          ],
+          "precision": 1.0,
+          "recall": 1.0,
+          "note": "对照组：正常应过滤到林霸+皇城"
+        },
+        {
+          "case": "filter_fail_open",
+          "expected": [
+            "林尘"
+          ],
+          "unrelated": [
+            "林霸",
+            "苏沐晴",
+            "青云村",
+            "皇城"
+          ],
+          "present": [
+            "林霸",
+            "青云村",
+            "苏沐晴",
+            "皇城",
+            "林尘"
+          ],
+          "precision": 0.2,
+          "recall": 1.0,
+          "note": "所有名字都匹配失败 → related 为空 → 兜底渲染全量设定集（过滤失效，无关条目全部混入）"
+        }
+      ],
+      "direction": "max",
+      "status": "fail"
+    },
+    {
+      "gap": "setting_filter",
+      "metric": "filter_recall",
+      "cases": 4,
+      "value": 0.875,
+      "target": 1.0,
+      "detail": [
+        {
+          "case": "filter_exact",
+          "expected": [
+            "林尘",
+            "青云村"
+          ],
+          "unrelated": [
+            "林霸",
+            "苏沐晴",
+            "皇城"
+          ],
+          "present": [
+            "青云村",
+            "林尘"
+          ],
+          "precision": 1.0,
+          "recall": 1.0,
+          "note": "精确名过滤，应只包含相关条目"
+        },
+        {
+          "case": "filter_nickname",
+          "expected": [
+            "林尘",
+            "青云村"
+          ],
+          "unrelated": [
+            "林霸",
+            "苏沐晴",
+            "皇城"
+          ],
+          "present": [
+            "青云村"
+          ],
+          "precision": 1.0,
+          "recall": 0.5,
+          "note": "昵称匹配失败 → related 为空 → 兜底渲染全量设定集（过滤失效，无关条目混入）"
+        },
+        {
+          "case": "filter_other_entity",
+          "expected": [
+            "林霸",
+            "皇城"
+          ],
+          "unrelated": [
+            "林尘",
+            "苏沐晴",
+            "青云村"
+          ],
+          "present": [
+            "林霸",
+            "皇城"
+          ],
+          "precision": 1.0,
+          "recall": 1.0,
+          "note": "对照组：正常应过滤到林霸+皇城"
+        },
+        {
+          "case": "filter_fail_open",
+          "expected": [
+            "林尘"
+          ],
+          "unrelated": [
+            "林霸",
+            "苏沐晴",
+            "青云村",
+            "皇城"
+          ],
+          "present": [
+            "林霸",
+            "青云村",
+            "苏沐晴",
+            "皇城",
+            "林尘"
+          ],
+          "precision": 0.2,
+          "recall": 1.0,
+          "note": "所有名字都匹配失败 → related 为空 → 兜底渲染全量设定集（过滤失效，无关条目全部混入）"
+        }
+      ],
+      "direction": "max",
+      "status": "fail"
+    },
+    {
+      "gap": "review_selfcheck",
+      "metric": "review_invalid_surface",
+      "cases": 1,
+      "value": 0.0,
+      "target": 1.0,
+      "detail": [
+        {
+          "invalid_review_returned_none": true,
+          "surfaced": false,
+          "plan_status": "reviewed",
+          "review_result_keys": []
+        }
+      ],
+      "direction": "max",
+      "status": "fail"
+    },
+    {
+      "gap": "silent_failures",
+      "metric": "silent_swallow_rate",
+      "direction": "min",
+      "cases": 3,
+      "value": 1.0,
+      "target": 0.0,
+      "detail": [
+        {
+          "summarize": {
+            "raised": false,
+            "surfaced": false
+          },
+          "backup": {
+            "raised": false,
+            "surfaced": false
+          },
+          "track": {
+            "raised": false,
+            "surfaced": false
+          }
+        }
+      ],
+      "status": "fail"
+    },
+    {
+      "gap": "chunk_boundary",
+      "metric": "boundary_quality",
+      "cases": 3,
+      "value": 0.0,
+      "target": 0.9,
+      "detail": [
+        {
+          "chunk_count": 4,
+          "boundary_count": 3,
+          "sentence_end_boundaries": 0,
+          "boundary_chars": [
+            "林",
+            "缭",
+            "天"
+          ]
+        }
+      ],
+      "direction": "max",
+      "status": "fail"
+    },
+    {
+      "gap": "chapter_fit",
+      "metric": "fit_accuracy",
+      "cases": 4,
+      "value": 1.0,
+      "target": 1.0,
+      "direction": "max",
+      "status": "pass",
+      "detail": [
+        {
+          "idea": "i1",
+          "expected": "recommended"
+        },
+        {
+          "idea": "i2",
+          "expected": "deferred"
+        },
+        {
+          "idea": "i3",
+          "expected": "deferred"
+        },
+        {
+          "idea": "i4",
+          "expected": "deferred"
+        }
+      ]
+    },
+    {
+      "gap": "continuity",
+      "metric": "conflict_detection_rate",
+      "cases": 1,
+      "value": 1.0,
+      "target": 1.0,
+      "direction": "max",
+      "status": "pass"
+    },
+    {
+      "gap": "continuity",
+      "metric": "governance_recovery_rate",
+      "cases": 1,
+      "value": 1.0,
+      "target": 1.0,
+      "direction": "max",
+      "status": "pass"
+    },
+    {
+      "gap": "continuity",
+      "metric": "provenance_snapshot_consistency",
+      "cases": 1,
+      "value": 1.0,
+      "target": 1.0,
+      "direction": "max",
+      "status": "pass"
+    },
+    {
+      "gap": "retrieval",
+      "metric": "hit_rate",
+      "cases": 20,
+      "value": null,
+      "target": null,
+      "status": "na",
+      "note": "Historical corpus unavailable; no fabricated metrics"
+    }
+  ]
 }

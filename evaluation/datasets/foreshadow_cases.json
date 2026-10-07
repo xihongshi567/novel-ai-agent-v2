@@ -1,0 +1,30 @@
+[
+  {
+    "id": "fs_true_positive",
+    "planted": ["林霸在密室埋下毒药"],
+    "resolved": "林霸在密室埋下的毒药被发现",
+    "expected_resolved": ["fs_001"],
+    "note": "强重叠表述，应正确回收"
+  },
+  {
+    "id": "fs_false_negative",
+    "planted": ["林尘的玉佩被林霸抢走"],
+    "resolved": "林尘从林霸手中夺回玉佩",
+    "expected_resolved": ["fs_001"],
+    "note": "换词表述（夺回 vs 抢走），当前 _similar 二元组重叠不足会漏回收"
+  },
+  {
+    "id": "fs_wrong_target",
+    "planted": ["林霸将在青云村对付林尘", "林尘将在青云村迎战林霸"],
+    "resolved": "林尘与林霸在青云村对峙",
+    "expected_resolved": ["fs_002"],
+    "note": "两条相似伏笔并存时，先到先得会回收错目标（fs_001 被误回收）"
+  },
+  {
+    "id": "fs_near_miss",
+    "planted": ["古洞中藏着一枚上古玉简"],
+    "resolved": "上古玉简被毁坏",
+    "expected_resolved": [],
+    "note": "相关但不同事件，不应误回收"
+  }
+]

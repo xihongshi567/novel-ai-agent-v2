@@ -1,0 +1,10 @@
+[
+  {"name": "林尘", "expected_char_id": "char_linchen", "note": "精确名"},
+  {"name": "林尘（主角）", "expected_char_id": "char_linchen", "note": "LLM 常见带注释写法"},
+  {"name": "尘儿", "expected_char_id": "char_linchen", "note": "昵称/小名"},
+  {"name": "尘哥", "expected_char_id": "char_linchen", "note": "称呼式昵称"},
+  {"name": "那个少年", "expected_char_id": "char_linchen", "note": "代词指代（无法匹配，期望修复后仍可解析或明确放弃）"},
+  {"name": "林尘少侠", "expected_char_id": "char_linchen", "note": "称号后缀"},
+  {"name": "林霸", "expected_char_id": "char_linba", "note": "精确名"},
+  {"name": "堂兄", "expected_char_id": "char_linba", "note": "亲属称谓指代"}
+]
