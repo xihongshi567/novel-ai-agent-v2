@@ -49,7 +49,7 @@ class StateTracker:
             status = cs.get("status", "").strip()
             if not name or not status:
                 continue
-            target = _resolve_character(bible, name)
+            target = bible.resolve_character(name)
             if target is None:
                 continue
             # 避免重复记录同一章
@@ -199,47 +199,6 @@ class StateTracker:
             "continuity": cont_counts,
             "raw": data,
         }
-
-
-# ---- 角色名解析（LLM 变体名 → bible 角色）----
-def _resolve_character(bible: Bible, name: str):
-    """把 LLM 返回的角色变体名解析到 bible 角色，按优先级分层匹配。
-
-    1. 精确相等（林尘）
-    2. 去括号注释后精确（林尘（主角））
-    3. 双向子串（林尘少侠）
-    4. 角色名末字昵称（尘儿/尘哥 → 尘）
-    5. summary 称呼全等（堂兄 == 林霸.summary）
-    6. summary 的 2+ 字片段（那个少年 → "少年" ∈ "废柴少年"）
-    """
-    stripped = name.strip()
-    if not stripped:
-        return None
-    base = stripped.split("（", 1)[0].split("(", 1)[0].strip()
-    for c in bible.characters:
-        if stripped == c.name or (base and base == c.name):
-            return c
-    for c in bible.characters:
-        if base in c.name or c.name in base:
-            return c
-    for c in bible.characters:
-        given = c.name[-1] if len(c.name) >= 2 else c.name
-        if given in stripped:
-            return c
-    for c in bible.characters:
-        if c.summary and stripped == c.summary.strip():
-            return c
-    for c in bible.characters:
-        if c.summary and _share_ngram(stripped, c.summary):
-            return c
-    return None
-
-
-def _share_ngram(name: str, summary: str) -> bool:
-    for i in range(len(name) - 1):
-        if name[i : i + 2] in summary:
-            return True
-    return False
 
 
 # ---- 工厂函数（避免直接 import 子类，减少耦合）----

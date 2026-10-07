@@ -72,6 +72,13 @@ class Lore(_Entry):
 Entry = Character | Location | Faction | Item | Lore
 
 
+def _share_ngram(name: str, summary: str) -> bool:
+    for i in range(len(name) - 1):
+        if name[i : i + 2] in summary:
+            return True
+    return False
+
+
 class Bible(BaseModel):
     project: str
     characters: list[Character] = Field(default_factory=list)
@@ -104,6 +111,38 @@ class Bible(BaseModel):
             *self.items,
             *self.lore,
         ]  # type: ignore[list-item]
+
+    def resolve_character(self, name: str) -> "Character | None":
+        """把 LLM 返回的角色变体名解析到角色（分层匹配）。
+
+        1. 精确相等（林尘）
+        2. 去括号注释后精确（林尘（主角））
+        3. 双向子串，仅限长度>=2 的查询名（林尘少侠；防"林"字过宽误配）
+        4. 角色名末字昵称（尘儿/尘哥 → 尘）
+        5. summary 称呼全等（堂兄 == 林霸.summary）
+        6. summary 的 2+ 字片段（那个少年 → "少年" ∈ "废柴少年"）
+        """
+        stripped = name.strip()
+        if not stripped:
+            return None
+        base = stripped.split("（", 1)[0].split("(", 1)[0].strip()
+        for c in self.characters:
+            if stripped == c.name or (base and base == c.name):
+                return c
+        for c in self.characters:
+            if len(base) >= 2 and (base in c.name or c.name in base):
+                return c
+        for c in self.characters:
+            given = c.name[-1] if len(c.name) >= 2 else c.name
+            if given in stripped:
+                return c
+        for c in self.characters:
+            if c.summary and stripped == c.summary.strip():
+                return c
+        for c in self.characters:
+            if c.summary and _share_ngram(stripped, c.summary):
+                return c
+        return None
 
     def render_for_prompt(self, include_ids: set[str] | None = None) -> str:
         """渲染成给 LLM 看的设定说明。include_ids=None 表示全部。"""

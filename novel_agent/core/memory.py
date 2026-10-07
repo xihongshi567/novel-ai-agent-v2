@@ -38,6 +38,7 @@ class ContextBundle:
     threads: list[dict] = field(default_factory=list)
     conflicts: list[dict] = field(default_factory=list)
     confirmations: list[dict] = field(default_factory=list)
+    rag_stats: dict | None = None
 
 
 class Memory:
@@ -106,11 +107,13 @@ class Memory:
             + ([plan.pov] if plan.pov else [])
             + ([plan.setting] if plan.setting else [])
         ):
-            for c in self.bible.characters:
-                if name and (name in c.name or c.name in name):
-                    related.add(c.id)
+            if not name:
+                continue
+            c = self.bible.resolve_character(name)
+            if c is not None:
+                related.add(c.id)
             for l in self.bible.locations:
-                if name and (name in l.name or l.name in name):
+                if l.name == name or (len(name) >= 2 and (name in l.name or l.name in name)):
                     related.add(l.id)
         bible_text = self.bible.render_for_prompt(related if related else None)
 
@@ -145,6 +148,8 @@ class Memory:
         )
         rag_text = ""
         retrieved_sources: list[dict] = []
+        rag_stats = {"hits": 0, "injected": 0, "dropped": 0,
+                     "limit_chars": self.rag_max_chars}
         if rag_query:
             engine = SearchEngine(self.project_dir)
             embedder = None
@@ -172,20 +177,30 @@ class Memory:
             seen: set[str] = set()
             lines: list[str] = []
             used = 0
+            dropped = 0
             for hit in hits:
                 key = f"{hit.doc.ref}:{hit.doc.text[:80]}"
                 if key in seen:
                     continue
                 source = hit.doc.ref
                 block = f"【来源:{source} | {hit.doc.title or hit.doc.kind} | 相关度:{hit.score:.2f}】{hit.doc.text}"
-                if used + len(block) > self.rag_max_chars:
-                    break
                 seen.add(key)
+                if used + len(block) > self.rag_max_chars:
+                    # 预算超限：来源仍记入 retrieved_sources（不静默丢弃），
+                    # 文本不注入；截断通过 rag_stats.dropped 显式暴露。
+                    dropped += 1
+                    retrieved_sources.append({"source_id": hit.doc.id, "source_type": hit.doc.kind,
+                        "source_ref": hit.doc.ref, "score": hit.score, "retrieval_method": "hybrid",
+                        "truncated": True})
+                    continue
                 lines.append(block)
                 retrieved_sources.append({"source_id": hit.doc.id, "source_type": hit.doc.kind,
-                    "source_ref": hit.doc.ref, "score": hit.score, "retrieval_method": "hybrid"})
+                    "source_ref": hit.doc.ref, "score": hit.score, "retrieval_method": "hybrid",
+                    "truncated": False})
                 used += len(block)
             rag_text = "\n".join(lines)
+            rag_stats = {"hits": len(hits), "injected": len(lines),
+                         "dropped": dropped, "limit_chars": self.rag_max_chars}
 
         # 连续性约束（伏笔/持有物/承诺/既定事实）——防止长篇崩坏的关键
         continuity_views = adapt_continuity(self.continuity, self.bible, self.world)
@@ -290,7 +305,7 @@ class Memory:
         thread_snapshot = [{"thread_id": t.id, "chapter_ids": sorted({n.chapter_id for n in t.nodes if n.chapter_id})} for t in self.threads.threads if t.id in used_thread_ids]
         conflict_snapshot = [{"conflict_id": r.conflict_id, "constraint_a": r.constraint_a, "constraint_b": r.constraint_b, "status": r.status} for r in conflict_reports]
         return ContextBundle(text="\n\n".join(parts), deterministic_sources=deterministic_sources,
-            selected_ideas=selected_ideas, retrieved_sources=retrieved_sources,
+            selected_ideas=selected_ideas, retrieved_sources=retrieved_sources, rag_stats=rag_stats,
             constraints=[{"constraint_id": c.id, "type": c.type, "strength": c.strength, "content": c.content, "source_chapter": c.source_chapter, "status": c.status, "supersedes": c.supersedes} for c in active_views], threads=thread_snapshot, conflicts=conflict_snapshot,
             confirmations=[{"confirmation_id": r.id, "conflict_id": r.conflict_id, "action": r.action, "timestamp": r.timestamp, "author": r.author, "note": r.note} for r in confirmations])
 

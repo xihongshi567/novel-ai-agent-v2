@@ -37,6 +37,17 @@ class Hit:
     snippet: str = ""  # 关键词命中时的高亮片段
 
 
+_SENTENCE_ENDS = set("。！？…\"”』")
+
+
+def _prev_sentence_end(text: str, limit: int, floor: int) -> int | None:
+    """在 (floor, limit] 区间内找最后一个句读，返回其后的切点；找不到返回 None。"""
+    for i in range(limit, floor, -1):
+        if text[i - 1] in _SENTENCE_ENDS:
+            return i
+    return None
+
+
 class VectorIndex:
     """numpy 向量索引：vec.npy + index.json。"""
 
@@ -216,6 +227,11 @@ class SearchEngine:
             start = 0
             while start < len(text):
                 end = min(len(text), start + size)
+                if end < len(text):
+                    # 切点优先回退到最近的句读（。！？…"”』），避免句子硬切
+                    boundary = _prev_sentence_end(text, end, start)
+                    if boundary is not None:
+                        end = boundary
                 parts.append(text[start:end])
                 if end >= len(text):
                     break

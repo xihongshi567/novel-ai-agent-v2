@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-08 01:06:13",
+  "generated_at": "2026-10-08 01:18:05",
   "gaps": [
     {
       "gap": "name_matching",
@@ -340,47 +340,47 @@
       "gap": "rag_truncation",
       "metric": "truncation_visibility",
       "cases": 1,
-      "value": 0.0,
+      "value": 1.0,
       "target": 1.0,
       "detail": [
         {
           "chapters": 8,
           "rag_max_chars": 3500,
-          "hits": 5,
-          "included": 3,
-          "dropped": 2,
-          "visible": false,
-          "coverage": 0.6
+          "hits": 4,
+          "included": 4,
+          "dropped": 0,
+          "visible": true,
+          "coverage": 1.0
         }
       ],
       "direction": "max",
-      "status": "fail"
+      "status": "pass"
     },
     {
       "gap": "rag_truncation",
       "metric": "rag_coverage",
       "cases": 1,
-      "value": 0.6,
+      "value": 1.0,
       "target": 1.0,
       "detail": [
         {
           "chapters": 8,
           "rag_max_chars": 3500,
-          "hits": 5,
-          "included": 3,
-          "dropped": 2,
-          "visible": false,
-          "coverage": 0.6
+          "hits": 4,
+          "included": 4,
+          "dropped": 0,
+          "visible": true,
+          "coverage": 1.0
         }
       ],
       "direction": "max",
-      "status": "fail"
+      "status": "pass"
     },
     {
       "gap": "setting_filter",
       "metric": "filter_precision",
       "cases": 4,
-      "value": 0.8,
+      "value": 1.0,
       "target": 0.9,
       "detail": [
         {
@@ -414,10 +414,11 @@
             "皇城"
           ],
           "present": [
+            "林尘",
             "青云村"
           ],
           "precision": 1.0,
-          "recall": 0.5,
+          "recall": 1.0,
           "note": "昵称匹配失败 → related 为空 → 兜底渲染全量设定集（过滤失效，无关条目混入）"
         },
         {
@@ -451,25 +452,21 @@
             "皇城"
           ],
           "present": [
-            "林尘",
-            "苏沐晴",
-            "皇城",
-            "青云村",
-            "林霸"
+            "林尘"
           ],
-          "precision": 0.2,
+          "precision": 1.0,
           "recall": 1.0,
           "note": "所有名字都匹配失败 → related 为空 → 兜底渲染全量设定集（过滤失效，无关条目全部混入）"
         }
       ],
       "direction": "max",
-      "status": "fail"
+      "status": "pass"
     },
     {
       "gap": "setting_filter",
       "metric": "filter_recall",
       "cases": 4,
-      "value": 0.875,
+      "value": 1.0,
       "target": 1.0,
       "detail": [
         {
@@ -503,10 +500,11 @@
             "皇城"
           ],
           "present": [
+            "林尘",
             "青云村"
           ],
           "precision": 1.0,
-          "recall": 0.5,
+          "recall": 1.0,
           "note": "昵称匹配失败 → related 为空 → 兜底渲染全量设定集（过滤失效，无关条目混入）"
         },
         {
@@ -540,19 +538,15 @@
             "皇城"
           ],
           "present": [
-            "林尘",
-            "苏沐晴",
-            "皇城",
-            "青云村",
-            "林霸"
+            "林尘"
           ],
-          "precision": 0.2,
+          "precision": 1.0,
           "recall": 1.0,
           "note": "所有名字都匹配失败 → related 为空 → 兜底渲染全量设定集（过滤失效，无关条目全部混入）"
         }
       ],
       "direction": "max",
-      "status": "fail"
+      "status": "pass"
     },
     {
       "gap": "review_selfcheck",
@@ -600,22 +594,22 @@
       "gap": "chunk_boundary",
       "metric": "boundary_quality",
       "cases": 3,
-      "value": 0.0,
+      "value": 1.0,
       "target": 0.9,
       "detail": [
         {
           "chunk_count": 4,
           "boundary_count": 3,
-          "sentence_end_boundaries": 0,
+          "sentence_end_boundaries": 3,
           "boundary_chars": [
-            "林",
-            "缭",
-            "天"
+            "。",
+            "。",
+            "。"
           ]
         }
       ],
       "direction": "max",
-      "status": "fail"
+      "status": "pass"
     },
     {
       "gap": "chapter_fit",
