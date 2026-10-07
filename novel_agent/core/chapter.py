@@ -115,7 +115,7 @@ class ChapterStore(BaseModel):
         self.summaries[cid] = ChapterSummary(
             chapter_id=cid,
             title=plan.title,
-            summary=summary or content[:200],
+            summary=summary or (content[:100] + content[-100:]),
             word_count=wc,
         )
         self.save(project_dir)

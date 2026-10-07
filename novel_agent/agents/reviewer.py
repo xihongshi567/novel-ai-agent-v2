@@ -71,7 +71,14 @@ class ReviewerAgent:
         from ..prompts import REVIEW_SYSTEM, review_chapter_prompt
 
         turns = review_chapter_prompt(context, content, chapter_plan)
-        return self._run_json(REVIEW_SYSTEM, turns, op="review", temperature=0.4)
+        result = self._run_json(REVIEW_SYSTEM, turns, op="review", temperature=0.4)
+        if result is None:
+            # 输出不可解析：重试一次（模型输出波动常见），仍失败则显式标记 invalid，
+            # 不让调用方把无效审校当成"干净通过"
+            result = self._run_json(REVIEW_SYSTEM, turns, op="review", temperature=0.7)
+        if result is None:
+            return {"invalid": True, "error": "审校输出无法解析为 JSON"}
+        return result
 
     def revise(self, content: str, review_text: str, chapter_id: str = "") -> str:
         from ..prompts import revise_chapter_prompt

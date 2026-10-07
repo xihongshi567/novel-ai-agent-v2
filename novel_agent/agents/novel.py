@@ -427,8 +427,9 @@ class NovelAgent:
         try:
             summary = self.writer.summarize(chapter_id, plan.title, content)
         except Exception as e:  # noqa: BLE001
-            summary = content[:200]
-            warnings.append(f"摘要生成失败，已用正文开头 200 字兜底: {e}")
+            # 头尾采样兜底：纯头部截断会永久丢失本章结尾关键信息（实体/结局）
+            summary = content[:100] + content[-100:]
+            warnings.append(f"摘要生成失败，已用正文头尾采样兜底: {e}")
 
         self.store.write_chapter(self.dir, plan, content, summary, source="ai")
         # 保存本章实际使用的上下文来源；旧项目无此文件时不影响既有流程。

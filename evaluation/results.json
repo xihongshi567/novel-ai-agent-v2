@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-08 01:20:53",
+  "generated_at": "2026-10-08 01:23:46",
   "gaps": [
     {
       "gap": "name_matching",
@@ -277,43 +277,45 @@
       "gap": "summary_fidelity",
       "metric": "summary_entity_recall",
       "cases": 2,
-      "value": 0.5,
+      "value": 1.0,
       "target": 0.9,
       "detail": [
         {
-          "fallback": true,
+          "fallback": false,
           "survived_entities": [
-            "林尘"
+            "林尘",
+            "赤焰剑"
           ],
-          "entity_recall": 0.5,
+          "entity_recall": 1.0,
           "summary_len": 200,
           "polluted_by_review_note": false,
-          "summary_tail": "土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的"
+          "summary_tail": "石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。突然，一把赤焰剑从天而降，插在林尘面前。"
         }
       ],
       "direction": "max",
-      "status": "fail"
+      "status": "pass"
     },
     {
       "gap": "summary_fidelity",
       "metric": "fallback_rate",
       "direction": "min",
       "cases": 1,
-      "value": 1.0,
+      "value": 0.0,
       "target": 0.0,
       "detail": [
         {
-          "fallback": true,
+          "fallback": false,
           "survived_entities": [
-            "林尘"
+            "林尘",
+            "赤焰剑"
           ],
-          "entity_recall": 0.5,
+          "entity_recall": 1.0,
           "summary_len": 200,
           "polluted_by_review_note": false,
-          "summary_tail": "土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的"
+          "summary_tail": "石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。突然，一把赤焰剑从天而降，插在林尘面前。"
         }
       ],
-      "status": "fail"
+      "status": "pass"
     },
     {
       "gap": "summary_purity",
@@ -323,14 +325,15 @@
       "target": 1.0,
       "detail": [
         {
-          "fallback": true,
+          "fallback": false,
           "survived_entities": [
-            "林尘"
+            "林尘",
+            "赤焰剑"
           ],
-          "entity_recall": 0.5,
+          "entity_recall": 1.0,
           "summary_len": 200,
           "polluted_by_review_note": false,
-          "summary_tail": "土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的"
+          "summary_tail": "石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。突然，一把赤焰剑从天而降，插在林尘面前。"
         }
       ],
       "direction": "max",
@@ -433,8 +436,8 @@
             "青云村"
           ],
           "present": [
-            "林霸",
-            "皇城"
+            "皇城",
+            "林霸"
           ],
           "precision": 1.0,
           "recall": 1.0,
@@ -519,8 +522,8 @@
             "青云村"
           ],
           "present": [
-            "林霸",
-            "皇城"
+            "皇城",
+            "林霸"
           ],
           "precision": 1.0,
           "recall": 1.0,
@@ -552,18 +555,21 @@
       "gap": "review_selfcheck",
       "metric": "review_invalid_surface",
       "cases": 1,
-      "value": 0.0,
+      "value": 1.0,
       "target": 1.0,
       "detail": [
         {
-          "invalid_review_returned_none": true,
-          "surfaced": false,
+          "invalid_review_returned_none": false,
+          "surfaced": true,
           "plan_status": "reviewed",
-          "review_result_keys": []
+          "review_result_keys": [
+            "invalid",
+            "error"
+          ]
         }
       ],
       "direction": "max",
-      "status": "fail"
+      "status": "pass"
     },
     {
       "gap": "silent_failures",
