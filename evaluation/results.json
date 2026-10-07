@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-07 23:58:18",
+  "generated_at": "2026-10-08 01:06:13",
   "gaps": [
     {
       "gap": "name_matching",
       "metric": "name_resolution_rate",
       "cases": 8,
-      "value": 0.5,
+      "value": 1.0,
       "target": 1.0,
       "detail": [
         {
@@ -26,22 +26,22 @@
         {
           "name": "尘儿",
           "expected": "char_linchen",
-          "resolved": null,
-          "correct": false,
+          "resolved": "char_linchen",
+          "correct": true,
           "note": "昵称/小名"
         },
         {
           "name": "尘哥",
           "expected": "char_linchen",
-          "resolved": null,
-          "correct": false,
+          "resolved": "char_linchen",
+          "correct": true,
           "note": "称呼式昵称"
         },
         {
           "name": "那个少年",
           "expected": "char_linchen",
-          "resolved": null,
-          "correct": false,
+          "resolved": "char_linchen",
+          "correct": true,
           "note": "代词指代（无法匹配，期望修复后仍可解析或明确放弃）"
         },
         {
@@ -61,19 +61,19 @@
         {
           "name": "堂兄",
           "expected": "char_linba",
-          "resolved": null,
-          "correct": false,
+          "resolved": "char_linba",
+          "correct": true,
           "note": "亲属称谓指代"
         }
       ],
       "direction": "max",
-      "status": "fail"
+      "status": "pass"
     },
     {
       "gap": "foreshadow_recovery",
       "metric": "resolution_accuracy",
       "cases": 4,
-      "value": 0.5,
+      "value": 1.0,
       "target": 1.0,
       "detail": [
         {
@@ -100,8 +100,10 @@
           "expected": [
             "fs_001"
           ],
-          "flipped": [],
-          "correct": false,
+          "flipped": [
+            "fs_001"
+          ],
+          "correct": true,
           "note": "换词表述（夺回 vs 抢走），当前 _similar 二元组重叠不足会漏回收"
         },
         {
@@ -115,9 +117,9 @@
             "fs_002"
           ],
           "flipped": [
-            "fs_001"
+            "fs_002"
           ],
-          "correct": false,
+          "correct": true,
           "note": "两条相似伏笔并存时，先到先得会回收错目标（fs_001 被误回收）"
         },
         {
@@ -133,13 +135,13 @@
         }
       ],
       "direction": "max",
-      "status": "fail"
+      "status": "pass"
     },
     {
       "gap": "foreshadow_recovery",
       "metric": "resolution_precision",
       "cases": 4,
-      "value": 0.5,
+      "value": 1.0,
       "target": 1.0,
       "detail": [
         {
@@ -166,8 +168,10 @@
           "expected": [
             "fs_001"
           ],
-          "flipped": [],
-          "correct": false,
+          "flipped": [
+            "fs_001"
+          ],
+          "correct": true,
           "note": "换词表述（夺回 vs 抢走），当前 _similar 二元组重叠不足会漏回收"
         },
         {
@@ -181,9 +185,9 @@
             "fs_002"
           ],
           "flipped": [
-            "fs_001"
+            "fs_002"
           ],
-          "correct": false,
+          "correct": true,
           "note": "两条相似伏笔并存时，先到先得会回收错目标（fs_001 被误回收）"
         },
         {
@@ -199,13 +203,13 @@
         }
       ],
       "direction": "max",
-      "status": "fail"
+      "status": "pass"
     },
     {
       "gap": "foreshadow_recovery",
       "metric": "resolution_recall",
       "cases": 4,
-      "value": 0.3333333333333333,
+      "value": 1.0,
       "target": 1.0,
       "detail": [
         {
@@ -232,8 +236,10 @@
           "expected": [
             "fs_001"
           ],
-          "flipped": [],
-          "correct": false,
+          "flipped": [
+            "fs_001"
+          ],
+          "correct": true,
           "note": "换词表述（夺回 vs 抢走），当前 _similar 二元组重叠不足会漏回收"
         },
         {
@@ -247,9 +253,9 @@
             "fs_002"
           ],
           "flipped": [
-            "fs_001"
+            "fs_002"
           ],
-          "correct": false,
+          "correct": true,
           "note": "两条相似伏笔并存时，先到先得会回收错目标（fs_001 被误回收）"
         },
         {
@@ -265,7 +271,7 @@
         }
       ],
       "direction": "max",
-      "status": "fail"
+      "status": "pass"
     },
     {
       "gap": "summary_fidelity",
@@ -389,8 +395,8 @@
             "皇城"
           ],
           "present": [
-            "青云村",
-            "林尘"
+            "林尘",
+            "青云村"
           ],
           "precision": 1.0,
           "recall": 1.0,
@@ -426,8 +432,8 @@
             "青云村"
           ],
           "present": [
-            "林霸",
-            "皇城"
+            "皇城",
+            "林霸"
           ],
           "precision": 1.0,
           "recall": 1.0,
@@ -445,11 +451,11 @@
             "皇城"
           ],
           "present": [
-            "林霸",
-            "青云村",
+            "林尘",
             "苏沐晴",
             "皇城",
-            "林尘"
+            "青云村",
+            "林霸"
           ],
           "precision": 0.2,
           "recall": 1.0,
@@ -478,8 +484,8 @@
             "皇城"
           ],
           "present": [
-            "青云村",
-            "林尘"
+            "林尘",
+            "青云村"
           ],
           "precision": 1.0,
           "recall": 1.0,
@@ -515,8 +521,8 @@
             "青云村"
           ],
           "present": [
-            "林霸",
-            "皇城"
+            "皇城",
+            "林霸"
           ],
           "precision": 1.0,
           "recall": 1.0,
@@ -534,11 +540,11 @@
             "皇城"
           ],
           "present": [
-            "林霸",
-            "青云村",
+            "林尘",
             "苏沐晴",
             "皇城",
-            "林尘"
+            "青云村",
+            "林霸"
           ],
           "precision": 0.2,
           "recall": 1.0,

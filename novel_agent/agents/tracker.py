@@ -49,12 +49,7 @@ class StateTracker:
             status = cs.get("status", "").strip()
             if not name or not status:
                 continue
-            # 模糊匹配人物
-            target = None
-            for c in bible.characters:
-                if name in c.name or c.name in name:
-                    target = c
-                    break
+            target = _resolve_character(bible, name)
             if target is None:
                 continue
             # 避免重复记录同一章
@@ -97,19 +92,23 @@ class StateTracker:
             fid = f"fs_{len(all_fs) + 1:03d}"
             all_fs.append(_mk_foreshadow(fid, chapter_id, desc))
             counts["foreshadows"] += 1
-        # 回收：尝试模糊匹配已存在的未回收伏笔
+        # 回收：从已存在的未回收伏笔中选匹配度最高的一个（非先到先得）
         for fr in data.get("foreshadows_resolved", []) or []:
             desc = fr.get("description", "").strip()
             if not desc:
                 continue
-            for existing in all_fs:
-                if existing.status == ForeshadowStatus.planted and _similar(
-                    desc, existing.description
-                ):
-                    existing.status = ForeshadowStatus.resolved
-                    existing.resolved_at = chapter_id
-                    counts["foreshadows"] += 1
-                    break
+            candidates = [
+                (f, score) for f in all_fs
+                if f.status == ForeshadowStatus.planted
+                and (score := _foreshadow_score(desc, f.description)) is not None
+                and score >= 0.6
+            ]
+            if not candidates:
+                continue
+            best = max(candidates, key=lambda pair: pair[1])[0]
+            best.status = ForeshadowStatus.resolved
+            best.resolved_at = chapter_id
+            counts["foreshadows"] += 1
 
         # 持有物
         for p in data.get("possessions", []) or []:
@@ -202,6 +201,47 @@ class StateTracker:
         }
 
 
+# ---- 角色名解析（LLM 变体名 → bible 角色）----
+def _resolve_character(bible: Bible, name: str):
+    """把 LLM 返回的角色变体名解析到 bible 角色，按优先级分层匹配。
+
+    1. 精确相等（林尘）
+    2. 去括号注释后精确（林尘（主角））
+    3. 双向子串（林尘少侠）
+    4. 角色名末字昵称（尘儿/尘哥 → 尘）
+    5. summary 称呼全等（堂兄 == 林霸.summary）
+    6. summary 的 2+ 字片段（那个少年 → "少年" ∈ "废柴少年"）
+    """
+    stripped = name.strip()
+    if not stripped:
+        return None
+    base = stripped.split("（", 1)[0].split("(", 1)[0].strip()
+    for c in bible.characters:
+        if stripped == c.name or (base and base == c.name):
+            return c
+    for c in bible.characters:
+        if base in c.name or c.name in base:
+            return c
+    for c in bible.characters:
+        given = c.name[-1] if len(c.name) >= 2 else c.name
+        if given in stripped:
+            return c
+    for c in bible.characters:
+        if c.summary and stripped == c.summary.strip():
+            return c
+    for c in bible.characters:
+        if c.summary and _share_ngram(stripped, c.summary):
+            return c
+    return None
+
+
+def _share_ngram(name: str, summary: str) -> bool:
+    for i in range(len(name) - 1):
+        if name[i : i + 2] in summary:
+            return True
+    return False
+
+
 # ---- 工厂函数（避免直接 import 子类，减少耦合）----
 def _mk_timeline(chapter_id: str, t: dict[str, Any]):
     from ..core import TimelineEvent
@@ -239,6 +279,50 @@ def _mk_fact(fid: str, chapter_id: str, content: str, category: str):
     from ..core import Fact
 
     return Fact(id=fid, chapter_id=chapter_id, content=content, category=category)
+
+
+# ---- 伏笔回收匹配（与 _similar 独立，只用于 foreshadows_resolved）----
+_FS_STOP = frozenset("的得了在把被从将着与于为和一枚中会向往进手里外个是有这那之也都")
+
+
+def _fs_core(s: str) -> str:
+    return "".join(ch for ch in s if ch not in _FS_STOP)
+
+
+def _lcs_len(a: str, b: str) -> int:
+    """最长公共子序列长度（保序）。事件要素顺序一致才构成同一事件。"""
+    n, m = len(a), len(b)
+    if not n or not m:
+        return 0
+    prev = [0] * (m + 1)
+    for i in range(1, n + 1):
+        cur = [0] * (m + 1)
+        for j in range(1, m + 1):
+            cur[j] = prev[j - 1] + 1 if a[i - 1] == b[j - 1] else max(prev[j], cur[j - 1])
+        prev = cur
+    return prev[m]
+
+
+def _foreshadow_score(a: str, b: str) -> float | None:
+    """伏笔回收匹配度，不达标返回 None。
+
+    组合评分：0.5*保序重叠（LCS 比例）+ 0.5*非保序重叠（bigram 比例）
+    + 主语前缀对齐加分（0.2）。换词表述靠非保序部分召回（夺回 vs 抢走），
+    要素顺序颠倒的相似句靠保序部分降权（对付 vs 对峙）。长度比约束：
+    回收句核心长度 >= 伏笔句核心的 75%，挡"上古玉简被毁坏"类简略句。
+    """
+    ac, bc = _fs_core(a), _fs_core(b)
+    if not ac or not bc or len(bc) / len(ac) < 0.75:
+        return None
+    a_set = {ac[i : i + 2] for i in range(len(ac) - 1)}
+    b_set = {bc[i : i + 2] for i in range(len(bc) - 1)}
+    if not a_set or not b_set:
+        return None
+    overlap = len(a_set & b_set) / max(len(a_set), len(b_set))
+    seq = _lcs_len(ac, bc) / max(len(ac), len(bc))
+    score = 0.5 * seq + 0.5 * overlap
+    bonus = 0.2 if ac[:2] == bc[:2] else 0.0
+    return score + bonus
 
 
 def _similar(a: str, b: str) -> bool:
