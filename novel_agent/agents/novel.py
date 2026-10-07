@@ -423,10 +423,12 @@ class NovelAgent:
         content = self._strip_self_title(content)
 
         # 生成摘要
+        warnings: list[str] = []
         try:
             summary = self.writer.summarize(chapter_id, plan.title, content)
-        except Exception:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001
             summary = content[:200]
+            warnings.append(f"摘要生成失败，已用正文开头 200 字兜底: {e}")
 
         self.store.write_chapter(self.dir, plan, content, summary, source="ai")
         # 保存本章实际使用的上下文来源；旧项目无此文件时不影响既有流程。
@@ -447,8 +449,8 @@ class NovelAgent:
                     "conflicts_detected": context_bundle.conflicts,
                     "confirmations": context_bundle.confirmations,
                 }, ensure_ascii=False, indent=2), encoding="utf-8")
-        except Exception:
-            pass
+        except Exception as e:
+            warnings.append(f"溯源文件写入失败: {e}")
         plan.status = ChapterStatus.drafted
         self.save_all()
 
@@ -457,8 +459,8 @@ class NovelAgent:
             from ..core.backup import backup_project
 
             backup_project(self.dir)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001
+            warnings.append(f"自动备份失败: {e}")
 
         # 记录写作进度
         try:
@@ -467,8 +469,8 @@ class NovelAgent:
             pd = ProgressData.load(self.dir, self.project.name)
             pd.record_today(len([c for c in content if c.strip()]))
             pd.save(self.dir)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001
+            warnings.append(f"写作进度记录失败: {e}")
 
         # 状态追踪：从本章正文提取状态变化，回写 bible + continuity
         # 这是防止长篇崩坏的关键步骤。放在审校前，让审校也能用到最新状态。
@@ -477,6 +479,7 @@ class NovelAgent:
             try:
                 tracking = self.track_chapter(chapter_id, verbose=verbose)
             except Exception as e:  # noqa: BLE001
+                warnings.append(f"状态追踪失败，不影响写作: {e}")
                 if verbose:
                     print(f"  [状态追踪失败，不影响写作] {e}")
 
@@ -491,6 +494,7 @@ class NovelAgent:
             "tracking": tracking,
             "review": review_result,
             "content": content,
+            "warnings": warnings,
         }
 
     def review_chapter(
@@ -507,9 +511,7 @@ class NovelAgent:
         self.store.write_chapter(
             self.dir, plan, ch.content, summary=self.store.summaries[chapter_id].summary
         )
-        # 审校意见入库
-        self.store.summaries[chapter_id].summary += f"\n[审校] {ch.review_note}"
-        self.store.save(self.dir)
+        # 审校意见存独立字段（review_note），不再追加进摘要，避免污染前情提要
 
         # 若检测到重大偏离，记录到大纲备注
         dev = result.get("deviation") or {}

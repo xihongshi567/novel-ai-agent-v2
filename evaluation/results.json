@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-08 01:18:05",
+  "generated_at": "2026-10-08 01:20:53",
   "gaps": [
     {
       "gap": "name_matching",
@@ -287,7 +287,7 @@
           ],
           "entity_recall": 0.5,
           "summary_len": 200,
-          "polluted_by_review_note": true,
+          "polluted_by_review_note": false,
           "summary_tail": "土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的"
         }
       ],
@@ -309,7 +309,7 @@
           ],
           "entity_recall": 0.5,
           "summary_len": 200,
-          "polluted_by_review_note": true,
+          "polluted_by_review_note": false,
           "summary_tail": "土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的"
         }
       ],
@@ -319,7 +319,7 @@
       "gap": "summary_purity",
       "metric": "summary_purity",
       "cases": 1,
-      "value": 0.0,
+      "value": 1.0,
       "target": 1.0,
       "detail": [
         {
@@ -329,12 +329,12 @@
           ],
           "entity_recall": 0.5,
           "summary_len": 200,
-          "polluted_by_review_note": true,
+          "polluted_by_review_note": false,
           "summary_tail": "土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的石坪上练剑，剑光霍霍，尘土飞扬。林尘在青云村外的"
         }
       ],
       "direction": "max",
-      "status": "fail"
+      "status": "pass"
     },
     {
       "gap": "rag_truncation",
@@ -395,8 +395,8 @@
             "皇城"
           ],
           "present": [
-            "林尘",
-            "青云村"
+            "青云村",
+            "林尘"
           ],
           "precision": 1.0,
           "recall": 1.0,
@@ -414,8 +414,8 @@
             "皇城"
           ],
           "present": [
-            "林尘",
-            "青云村"
+            "青云村",
+            "林尘"
           ],
           "precision": 1.0,
           "recall": 1.0,
@@ -433,8 +433,8 @@
             "青云村"
           ],
           "present": [
-            "皇城",
-            "林霸"
+            "林霸",
+            "皇城"
           ],
           "precision": 1.0,
           "recall": 1.0,
@@ -481,8 +481,8 @@
             "皇城"
           ],
           "present": [
-            "林尘",
-            "青云村"
+            "青云村",
+            "林尘"
           ],
           "precision": 1.0,
           "recall": 1.0,
@@ -500,8 +500,8 @@
             "皇城"
           ],
           "present": [
-            "林尘",
-            "青云村"
+            "青云村",
+            "林尘"
           ],
           "precision": 1.0,
           "recall": 1.0,
@@ -519,8 +519,8 @@
             "青云村"
           ],
           "present": [
-            "皇城",
-            "林霸"
+            "林霸",
+            "皇城"
           ],
           "precision": 1.0,
           "recall": 1.0,
@@ -570,25 +570,25 @@
       "metric": "silent_swallow_rate",
       "direction": "min",
       "cases": 3,
-      "value": 1.0,
+      "value": 0.0,
       "target": 0.0,
       "detail": [
         {
           "summarize": {
             "raised": false,
-            "surfaced": false
+            "surfaced": true
           },
           "backup": {
             "raised": false,
-            "surfaced": false
+            "surfaced": true
           },
           "track": {
             "raised": false,
-            "surfaced": false
+            "surfaced": true
           }
         }
       ],
-      "status": "fail"
+      "status": "pass"
     },
     {
       "gap": "chunk_boundary",
