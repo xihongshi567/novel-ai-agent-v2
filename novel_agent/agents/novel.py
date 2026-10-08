@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import time
+import difflib
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -572,7 +573,24 @@ class NovelAgent:
         if plan.status != ChapterStatus.reviewed:
             plan.status = ChapterStatus.reviewed
             self.save_all()
-        return {"review": result, "revised": revised_content}
+        # diff: 仅在 auto_revise 且真的写出修订时才计算,默认空。
+        # UI 拿 diff 行渲染红绿对比;空表示未修订。
+        diff: list[str] = []
+        if revised_content and len(revised_content) > 50:
+            from_lines = ch.content.splitlines(keepends=True)
+            to_lines = revised_content.splitlines(keepends=True)
+            raw = list(difflib.unified_diff(
+                from_lines, to_lines,
+                fromfile=f"{chapter_id}.before", tofile=f"{chapter_id}.after",
+                n=2,
+            ))
+            # 去掉 ---/+++ 头部元信息,只留 +/-/ 起始行给 UI
+            diff = [ln.rstrip("\n") for ln in raw
+                    if not ln.startswith(("---", "+++"))]
+        return {"review": result, "revised": revised_content,
+                "revised_applied": bool(revised_content and len(revised_content) > 50),
+                "diff": diff,
+                "diff_lines": len(diff)}
 
     # ---------------- 状态追踪 ----------------
     def track_chapter(
