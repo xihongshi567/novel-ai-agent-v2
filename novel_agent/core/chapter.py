@@ -47,6 +47,9 @@ class ChapterStore(BaseModel):
     summaries: dict[str, ChapterSummary] = Field(default_factory=dict)
     # 审校意见（独立于 summary，避免污染前情提要；M5 修复对称操作）
     review_notes: dict[str, str] = Field(default_factory=dict)
+    # 单章节最多保留的历史版本数；超过则归档时删最旧。防止长篇项目
+    # versions 目录无限膨胀拖累 load()。
+    max_versions_per_chapter: int = 20
 
     # ---- 路径 ----
     @staticmethod
@@ -105,10 +108,11 @@ class ChapterStore(BaseModel):
         """
         self.chapters_dir(project_dir).mkdir(parents=True, exist_ok=True)
         cid = plan.chapter_id
-        # 归档旧版（若存在）
+        # 归档旧版（若存在）；记录本次归档的 v 编号以保证元信息与磁盘一致
         cur_path = self.chapter_path(project_dir, cid)
+        v_num = 0
         if cur_path.exists():
-            self._archive_version(
+            v_num = self._archive_version(
                 project_dir, cid, cur_path.read_text(encoding="utf-8")
             )
         wc = len([c for c in content if c.strip()])
@@ -131,7 +135,9 @@ class ChapterStore(BaseModel):
         if review_note is not None:
             self.review_notes[cid] = review_note
         self.save(project_dir)
-        self._log_version_meta(project_dir, cid, wc, source)
+        self._log_version_meta(project_dir, cid, wc, source, v_num)
+        # 归档 + 元信息追加后裁剪：先看是否超 max_versions_per_chapter
+        self._prune_old_versions(project_dir, cid)
         return ch
 
     # ============ 多版本管理 ============
@@ -143,18 +149,51 @@ class ChapterStore(BaseModel):
     def versions_meta_path(project_dir: Path) -> Path:
         return ChapterStore.versions_dir(project_dir) / "versions.json"
 
-    def _archive_version(self, project_dir: Path, cid: str, text: str) -> None:
-        """把旧内容归档为 v{n}.md。"""
+    def _archive_version(self, project_dir: Path, cid: str, text: str) -> int:
+        """把旧内容归档为 v{n}.md，返回本次归档的 v 文件编号。版本裁剪由
+        write_chapter 末尾统一调用 _prune_old_versions 触发，避免在归档
+        与元信息追加之间出现时序竞态。
+
+        n 取元信息中所有 version 字段的最大值 + 1（不是 len+1），保证
+        即便有占位 v_num=0 也不会推高编号。
+        """
         vdir = self.versions_dir(project_dir)
         vdir.mkdir(parents=True, exist_ok=True)
         existing = self.list_versions(project_dir, cid)
-        n = len(existing) + 1
+        max_n = max((v["version"] for v in existing if isinstance(v.get("version"), int)), default=0)
+        n = max_n + 1
         atomic_write_text(vdir / f"{cid}.v{n}.md", text)
+        return n
+
+    def _prune_old_versions(self, project_dir: Path, cid: str) -> None:
+        """单章版本数超过 max_versions_per_chapter 时，删除最旧的版本文件 + 元信息条目。"""
+        cap = self.max_versions_per_chapter
+        if cap <= 0:
+            return  # cap<=0 表示不限
+        versions = self.list_versions(project_dir, cid)
+        if len(versions) <= cap:
+            return
+        excess = len(versions) - cap
+        vdir = self.versions_dir(project_dir)
+        for entry in versions[:excess]:
+            v_file = vdir / f"{cid}.v{entry['version']}.md"
+            if v_file.exists():
+                v_file.unlink()
+        # 从 versions.json 同步裁剪（重写元信息）
+        import json
+        meta_path = self.versions_meta_path(project_dir)
+        if not meta_path.exists():
+            return
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        cid_versions = meta.get("versions", {}).get(cid, [])
+        meta["versions"][cid] = cid_versions[excess:]
+        atomic_write_json(meta_path, meta, ensure_ascii=False, indent=2)
 
     def _log_version_meta(
-        self, project_dir: Path, cid: str, word_count: int, source: str
+        self, project_dir: Path, cid: str, word_count: int, source: str,
+        v_num: int,
     ) -> None:
-        """记录版本元信息。"""
+        """记录版本元信息。v_num 是本次归档写入的 v 文件编号（与磁盘一致）。"""
         import json
         import time as _t
 
@@ -167,7 +206,7 @@ class ChapterStore(BaseModel):
         versions = meta.setdefault("versions", {}).setdefault(cid, [])
         versions.append(
             {
-                "version": len(versions) + 1,
+                "version": v_num,
                 "ts": _t.time(),
                 "word_count": word_count,
                 "source": source,
@@ -214,15 +253,18 @@ class ChapterStore(BaseModel):
             return None
         # 当前版归档（作为新版本）
         cur_path = self.chapter_path(project_dir, cid)
+        v_num = 0
         if cur_path.exists():
-            self._archive_version(
+            v_num = self._archive_version(
                 project_dir, cid, cur_path.read_text(encoding="utf-8")
             )
         atomic_write_text(cur_path, target.render_markdown())
-        self._log_version_meta(project_dir, cid, target.word_count, "rollback")
+        self._log_version_meta(project_dir, cid, target.word_count, "rollback", v_num)
         if cid in self.summaries:
             self.summaries[cid].word_count = target.word_count
             self.save(project_dir)
+        # rollback 后裁剪
+        self._prune_old_versions(project_dir, cid)
         return target
 
     def diff(
