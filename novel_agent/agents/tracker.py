@@ -89,7 +89,7 @@ class StateTracker:
             desc = f.get("description", "").strip()
             if not desc:
                 continue
-            fid = f"fs_{len(all_fs) + 1:03d}"
+            fid = _next_id("fs", all_fs)
             all_fs.append(_mk_foreshadow(fid, chapter_id, desc))
             counts["foreshadows"] += 1
         # 回收：从已存在的未回收伏笔中选匹配度最高的一个（非先到先得）
@@ -118,7 +118,7 @@ class StateTracker:
                 continue
             acquired = p.get("acquired", True)
             if acquired:
-                pid = f"pos_{len(continuity.possessions) + 1:03d}"
+                pid = _next_id("pos", continuity.possessions)
                 continuity.possessions.append(
                     _mk_possession(pid, chapter_id, owner, item, p.get("detail", ""))
                 )
@@ -144,7 +144,7 @@ class StateTracker:
                 continue
             made = pm.get("made", True)
             if made:
-                pmid = f"pm_{len(continuity.promises) + 1:03d}"
+                pmid = _next_id("pm", continuity.promises)
                 continuity.promises.append(
                     _mk_promise(
                         pmid, chapter_id, maker, pm.get("receiver", ""), content
@@ -171,7 +171,7 @@ class StateTracker:
             # 去重：避免重复记录相同事实
             if any(_similar(c, x.content) for x in continuity.facts):
                 continue
-            fid = f"fact_{len(continuity.facts) + 1:03d}"
+            fid = _next_id("fact", continuity.facts)
             continuity.facts.append(_mk_fact(fid, chapter_id, c, f.get("category", "")))
             counts["facts"] += 1
 
@@ -238,6 +238,21 @@ def _mk_fact(fid: str, chapter_id: str, content: str, category: str):
     from ..core import Fact
 
     return Fact(id=fid, chapter_id=chapter_id, content=content, category=category)
+
+
+def _next_id(prefix: str, existing: list, width: int = 3) -> str:
+    """生成与 existing 中 id 不冲突的新 id：保留 fs_001 格式向后兼容评测数据集，
+    同时删除条目后再生成会找空位而不是复用旧 id（避免历史数据重导入时的引用错乱）。
+
+    格式固定为 <prefix>_<3 位零填充序号>：fs_001, pos_001, pm_001, fact_001。
+    """
+    taken = {getattr(x, "id", "") for x in existing}
+    n = 1
+    while True:
+        cand = f"{prefix}_{n:0{width}d}"
+        if cand not in taken:
+            return cand
+        n += 1
 
 
 # ---- 伏笔回收匹配（与 _similar 独立，只用于 foreshadows_resolved）----
