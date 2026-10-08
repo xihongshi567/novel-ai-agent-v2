@@ -63,6 +63,167 @@ class KnowledgeBase:
         self.ideas.save(self.dir)
         self.threads.save(self.dir)
 
+    # ============ 健康诊断（doctor）============
+    def doctor(self) -> dict[str, Any]:
+        """轻量诊断:跨 5 个核心子表校验 id 唯一/必填字段/交叉一致性。
+
+        返回：
+          healthy: bool —— 没有任何 error 即 true
+          issues: list[dict] —— 每条 {severity, module, path, message}
+          summary: dict —— 各表条目数与关键计数
+        """
+        issues: list[dict[str, Any]] = []
+
+        def _issue(severity: str, module: str, path: str, message: str) -> None:
+            issues.append({
+                "severity": severity, "module": module,
+                "path": path, "message": message,
+            })
+
+        # ---- bible ----
+        bible_counts = {"characters": 0, "locations": 0, "factions": 0,
+                        "items": 0, "lore": 0}
+        bible_seen: dict[str, list[str]] = {}  # id -> [kind,...]
+        for kind, attr, count_key in (
+            ("character", self.bible.characters, "characters"),
+            ("location", self.bible.locations, "locations"),
+            ("faction", self.bible.factions, "factions"),
+            ("item", self.bible.items, "items"),
+            ("lore", self.bible.lore, "lore"),
+        ):
+            for i, e in enumerate(attr):
+                bible_counts[count_key] += 1
+                p = f"{kind}s[{i}]"
+                if not e.id:
+                    _issue("error", "bible", f"{p}.id", f"{kind} 缺 id")
+                else:
+                    bible_seen.setdefault(e.id, []).append(kind)
+                if not e.name:
+                    _issue("error", "bible", f"{p}.name", f"{kind} 缺 name")
+        for cid, kinds in bible_seen.items():
+            if len(kinds) > 1:
+                _issue("error", "bible", cid,
+                       f"id 跨 kind 冲突:{'/'.join(sorted(set(kinds)))}")
+
+        # ---- continuity ----
+        cont_counts = {"timeline": len(self.continuity.timeline),
+                       "foreshadows": len(self.continuity.foreshadows),
+                       "open_foreshadows": 0,
+                       "possessions": len(self.continuity.possessions),
+                       "promises": len(self.continuity.promises),
+                       "facts": len(self.continuity.facts)}
+        cont_seen: set[str] = set()
+        for i, f in enumerate(self.continuity.foreshadows):
+            p = f"foreshadows[{i}]"
+            if f.id in cont_seen:
+                _issue("error", "continuity", f.id, "foreshadow id 重复")
+            cont_seen.add(f.id)
+            if not f.id:
+                _issue("error", "continuity", p, "foreshadow 缺 id")
+            if f.status == "planted" and not f.chapter_id:
+                _issue("error", "continuity", p,
+                       "planted 状态缺 chapter_id(无法定位回收章节)")
+            if f.status == "planted":
+                cont_counts["open_foreshadows"] += 1
+        for i, e in enumerate(self.continuity.timeline):
+            p = f"timeline[{i}]"
+            if not e.chapter_id:
+                _issue("error", "continuity", p, "timeline 事件缺 chapter_id")
+            if not e.event:
+                _issue("warning", "continuity", p, "timeline 事件描述为空")
+        for i, fa in enumerate(self.continuity.facts):
+            p = f"facts[{i}]"
+            if not fa.content:
+                _issue("warning", "continuity", p, "fact 内容为空")
+        pos_seen: set[str] = set()
+        for i, ps in enumerate(self.continuity.possessions):
+            p = f"possessions[{i}]"
+            if ps.id in pos_seen:
+                _issue("error", "continuity", ps.id, "possession id 重复")
+            pos_seen.add(ps.id)
+            if not ps.id:
+                _issue("error", "continuity", p, "possession 缺 id")
+        pm_seen: set[str] = set()
+        for i, pm in enumerate(self.continuity.promises):
+            p = f"promises[{i}]"
+            if pm.id in pm_seen:
+                _issue("error", "continuity", pm.id, "promise id 重复")
+            pm_seen.add(pm.id)
+            if not pm.id:
+                _issue("error", "continuity", p, "promise 缺 id")
+        fact_seen: set[str] = set()
+        for i, fa in enumerate(self.continuity.facts):
+            p = f"facts[{i}]"
+            if fa.id in fact_seen:
+                _issue("error", "continuity", fa.id, "fact id 重复")
+            fact_seen.add(fa.id)
+            if not fa.id:
+                _issue("error", "continuity", p, "fact 缺 id")
+
+        # ---- world ----
+        world_counts = {"elements": len(self.world.elements),
+                        "with_constraints": 0}
+        for i, el in enumerate(self.world.elements):
+            p = f"elements[{i}]"
+            if not el.name:
+                _issue("error", "world", p, "world element 缺 name")
+            if el.constraints:
+                world_counts["with_constraints"] += 1
+
+        # ---- ideas ----
+        idea_counts = {"total": len(self.ideas.ideas),
+                       "available": len(self.ideas.available()),
+                       "used": 0, "dropped": 0}
+        idea_seen: set[str] = set()
+        for i, idea in enumerate(self.ideas.ideas):
+            p = f"ideas[{i}]"
+            if idea.id in idea_seen:
+                _issue("error", "ideas", idea.id, "idea id 重复")
+            idea_seen.add(idea.id)
+            if not idea.id:
+                _issue("error", "ideas", p, "idea 缺 id")
+            if not idea.content:
+                _issue("warning", "ideas", p, f"idea {idea.id} 内容为空")
+            if idea.status == "used":
+                idea_counts["used"] += 1
+            elif idea.status == "dropped":
+                idea_counts["dropped"] += 1
+
+        # ---- threads ----
+        thread_counts = {"total": len(self.threads.threads), "active": 0,
+                         "open_nodes": 0}
+        thread_seen: set[str] = set()
+        for i, t in enumerate(self.threads.threads):
+            p = f"threads[{i}]"
+            if t.id in thread_seen:
+                _issue("error", "threads", t.id, "thread id 重复")
+            thread_seen.add(t.id)
+            if not t.id:
+                _issue("error", "threads", p, "thread 缺 id")
+            if t.status == "active":
+                thread_counts["active"] += 1
+            for j, n in enumerate(t.nodes):
+                np_ = f"{p}.nodes[{j}]"
+                if not n.chapter_id:
+                    _issue("warning", "threads", np_, "thread node 缺 chapter_id")
+                if t.status == "active" and not n.closed:
+                    thread_counts["open_nodes"] += 1
+
+        errors = sum(1 for x in issues if x["severity"] == "error")
+        return {
+            "healthy": errors == 0,
+            "errors": errors,
+            "warnings": sum(1 for x in issues if x["severity"] == "warning"),
+            "issues": issues,
+            "summary": {
+                "bible": bible_counts,
+                "continuity": cont_counts,
+                "world": world_counts,
+                "ideas": idea_counts,
+                "threads": thread_counts,
+            },
+        }
+
     # ============ 智能操作（需 LLM）============
     def with_agent(self, backend: LLMBackend) -> "_KBOps":
         """绑定一个 LLM 后端，返回可执行智能操作的对象。"""

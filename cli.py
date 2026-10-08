@@ -368,7 +368,23 @@ def cmd_kb(args: argparse.Namespace) -> int:
             _print(f"  {u.get('idea_id')} 暂不适合：{u.get('reason')}")
         return 0
 
-    _print("用法: kb <project> {view,idea,world,threads,timeline,place} ...")
+    if sub == "doctor":
+        r = agent.kb.doctor()
+        _print(f"=== kb doctor ===")
+        _print(f"状态：{'✓ 健康' if r['healthy'] else '✗ 有问题'}  "
+               f"error={r['errors']}  warning={r['warnings']}")
+        s = r["summary"]
+        _print(f"  bible: {s['bible']}")
+        _print(f"  continuity: {s['continuity']}")
+        _print(f"  world: {s['world']}")
+        _print(f"  ideas: {s['ideas']}")
+        _print(f"  threads: {s['threads']}")
+        for it in r["issues"]:
+            mark = "✗" if it["severity"] == "error" else "!"
+            _print(f"  {mark}[{it['module']}] {it['path']}: {it['message']}")
+        return 0 if r["healthy"] else 2
+
+    _print("用法: kb <project> {view,idea,world,threads,timeline,place,doctor} ...")
     return 1
 
 
@@ -771,7 +787,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sp.add_argument("project")
     sp.add_argument(
-        "kb_cmd", choices=["view", "idea", "world", "threads", "timeline", "place"]
+        "kb_cmd", choices=["view", "idea", "world", "threads", "timeline", "place", "doctor"]
     )
     # idea 选项
     sp.add_argument("--add", dest="idea_add", help="添加 idea（内容）")
