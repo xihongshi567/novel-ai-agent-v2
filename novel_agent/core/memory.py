@@ -39,6 +39,8 @@ class ContextBundle:
     conflicts: list[dict] = field(default_factory=list)
     confirmations: list[dict] = field(default_factory=list)
     rag_stats: dict | None = None
+    # 各 section 注入统计：{name: {"chars": int, "items": int|None}}
+    section_stats: dict = field(default_factory=dict)
 
 
 class Memory:
@@ -223,6 +225,9 @@ class Memory:
         # 世界观硬约束（绝对不能违反）
         world_constraints = self.world.render_for_prompt(with_constraints_only=True)
 
+        # hard 子集与冲突报告（parts 装配前预先算好，section_stats 需要 items 计数）
+        hard = [c for c in active_views if c.strength == "hard"]
+
         # 故事线脉络（让 LLM 知道当前在哪条线的哪个节点）
         threads_text = self.threads.render_for_prompt(only_active=True)
 
@@ -250,46 +255,34 @@ class Memory:
                 selected_ideas.append({"source_id": r.source_id, "source_type": "idea", "source_ref": r.idea.id, "selection_reason": "+".join(r.retrieval_channels), "retrieval_channels": r.retrieval_channels, "score": r.final_score, "status": r.status, "reasons": r.reasons + fit.reasons, "thread_ids": link.thread_ids, "planned_chapters": link.planned_chapters, "used_chapters": link.used_chapters, "chapter_fit": fit.chapter_fit, "decision": fit.decision, "selected": True, "used": "unknown"})
 
         parts: list[str] = []
+        # 跟踪每个 section 的字符数和条目数（用于 section_stats 可观测性）
+        section_stats: dict[str, dict[str, int]] = {}
+
+        def _push(name: str, text: str, items: int | None = None, title: str = "") -> None:
+            if not text:
+                return
+            full = (title + "\n" + text) if title else text
+            parts.append(full)
+            section_stats[name] = {"chars": len(text), "items": items if items is not None else 0}
 
         # 📜 主旨——最高优先级，放在第一段
-        manifesto_text = self.manifesto.render_for_prompt()
-        if manifesto_text:
-            parts.append(manifesto_text)
-
-        parts.append("===== 故事设定 =====")
-        parts.append(bible_text)
-        if world_constraints:
-            parts.append("===== 世界观硬约束（绝对不能违反）=====")
-            parts.append(world_constraints)
-        if continuity_text:
-            parts.append("===== 连续性约束（务必遵守，不得违反）=====")
-            parts.append(continuity_text)
-        hard = [c for c in active_views if c.strength == "hard"]
+        _push("manifesto", self.manifesto.render_for_prompt())
+        _push("bible", bible_text, title="===== 故事设定 =====")
+        _push("world_constraints", world_constraints, title="===== 世界观硬约束（绝对不能违反）=====")
+        _push("continuity", continuity_text, title="===== 连续性约束（务必遵守，不得违反）=====")
         if hard:
-            parts.append("===== ACTIVE CONTINUITY CONSTRAINTS =====")
-            parts.append("\n".join(f"[HARD][{c.id}] {c.content}" for c in hard))
+            _push("hard_constraints", "\n".join(f"[HARD][{c.id}] {c.content}" for c in hard),
+                  items=len(hard), title="===== ACTIVE CONTINUITY CONSTRAINTS =====")
         if conflict_reports:
-            parts.append("===== UNRESOLVED CONTINUITY CONFLICTS =====")
-            parts.append("\n".join(f"{r.conflict_id}: {r.constraint_a} vs {r.constraint_b}" for r in conflict_reports))
-        if threads_text:
-            parts.append("===== 故事线脉络（本章需推进的线）=====")
-            parts.append(threads_text)
-        parts.append("===== 故事大纲（节选）=====")
-        parts.append(outline_text)
-        if summaries_block:
-            parts.append("===== 前情提要（已发生章节摘要）=====")
-            parts.append(summaries_block)
-        if prev_text:
-            parts.append("===== 上一章结尾原文（用于衔接）=====")
-            parts.append(prev_text)
-        if ideas_text:
-            parts.append("===== 可用灵感 idea（可酌情融入本章）=====")
-            parts.append(ideas_text)
-        if rag_text:
-            parts.append("===== RAG 检索到的相关资料（仅作事实参考）=====")
-            parts.append(rag_text)
-        parts.append("===== 本章写作计划 =====")
-        parts.append(current)
+            _push("conflicts", "\n".join(f"{r.conflict_id}: {r.constraint_a} vs {r.constraint_b}" for r in conflict_reports),
+                  items=len(conflict_reports), title="===== UNRESOLVED CONTINUITY CONFLICTS =====")
+        _push("threads", threads_text, title="===== 故事线脉络（本章需推进的线）=====")
+        _push("outline", outline_text, title="===== 故事大纲（节选）=====")
+        _push("summaries", summaries_block, items=len(recent), title="===== 前情提要（已发生章节摘要）=====")
+        _push("prev_tail", prev_text, title="===== 上一章结尾原文（用于衔接）=====")
+        _push("ideas", ideas_text, items=len(selected_ideas), title="===== 可用灵感 idea（可酌情融入本章）=====")
+        _push("rag", rag_text, items=len(lines) if rag_text else 0, title="===== RAG 检索到的相关资料（仅作事实参考）=====")
+        _push("current_plan", current, title="===== 本章写作计划 =====")
         deterministic_sources = []
         for sid, stype, sref in [
             ("manifesto", "manifesto", "manifesto"),
@@ -310,6 +303,7 @@ class Memory:
         conflict_snapshot = [{"conflict_id": r.conflict_id, "constraint_a": r.constraint_a, "constraint_b": r.constraint_b, "status": r.status} for r in conflict_reports]
         return ContextBundle(text="\n\n".join(parts), deterministic_sources=deterministic_sources,
             selected_ideas=selected_ideas, retrieved_sources=retrieved_sources, rag_stats=rag_stats,
+            section_stats=section_stats,
             constraints=[{"constraint_id": c.id, "type": c.type, "strength": c.strength, "content": c.content, "source_chapter": c.source_chapter, "status": c.status, "supersedes": c.supersedes} for c in active_views], threads=thread_snapshot, conflicts=conflict_snapshot,
             confirmations=[{"confirmation_id": r.id, "conflict_id": r.conflict_id, "action": r.action, "timestamp": r.timestamp, "author": r.author, "note": r.note} for r in confirmations])
 
