@@ -43,6 +43,8 @@ class ChapterStore(BaseModel):
     """所有章节摘要的索引表。"""
 
     summaries: dict[str, ChapterSummary] = Field(default_factory=dict)
+    # 审校意见（独立于 summary，避免污染前情提要；M5 修复对称操作）
+    review_notes: dict[str, str] = Field(default_factory=dict)
 
     # ---- 路径 ----
     @staticmethod
@@ -69,14 +71,18 @@ class ChapterStore(BaseModel):
         return cls(
             summaries={
                 k: ChapterSummary(**v) for k, v in data.get("summaries", {}).items()
-            }
+            },
+            review_notes=dict(data.get("review_notes", {})),
         )
 
     def save(self, project_dir: Path) -> None:
         import json
 
         self.chapters_dir(project_dir).mkdir(parents=True, exist_ok=True)
-        data = {"summaries": {k: v.model_dump() for k, v in self.summaries.items()}}
+        data = {
+            "summaries": {k: v.model_dump() for k, v in self.summaries.items()},
+            "review_notes": dict(self.review_notes),
+        }
         with open(self.summaries_path(project_dir), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -89,11 +95,14 @@ class ChapterStore(BaseModel):
         summary: str = "",
         *,
         source: str = "ai",
+        review_note: str | None = None,
     ) -> Chapter:
         """写入章节正文。
 
         若该章已存在，会自动把旧版归档到 versions/<cid>.v{n}.md。
         source: 'ai' | 'human' | 'revise'，记录版本来源。
+        review_note: 非 None 时写入 ChapterStore.review_notes（与 summary 分开存储，
+        避免审校意见污染前情提要；M5 对称操作）。
         """
         self.chapters_dir(project_dir).mkdir(parents=True, exist_ok=True)
         cid = plan.chapter_id
@@ -112,12 +121,17 @@ class ChapterStore(BaseModel):
         )
         with open(cur_path, "w", encoding="utf-8") as f:
             f.write(ch.render_markdown())
+        # 头尾采样兜底：n 随长度收缩，避免短章节头尾重叠
+        n = min(100, max(1, len(content) // 3))
+        fallback_summary = content[:n] + content[-n:]
         self.summaries[cid] = ChapterSummary(
             chapter_id=cid,
             title=plan.title,
-            summary=summary or (content[:100] + content[-100:]),
+            summary=summary or fallback_summary,
             word_count=wc,
         )
+        if review_note is not None:
+            self.review_notes[cid] = review_note
         self.save(project_dir)
         self._log_version_meta(project_dir, cid, wc, source)
         return ch
@@ -255,6 +269,7 @@ class ChapterStore(BaseModel):
             title=title,
             content=content,
             word_count=s.word_count if s else len(content),
+            review_note=self.review_notes.get(chapter_id, ""),
         )
 
     def tail(self, project_dir: Path, chapter_id: str, chars: int) -> str:

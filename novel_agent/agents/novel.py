@@ -427,8 +427,10 @@ class NovelAgent:
         try:
             summary = self.writer.summarize(chapter_id, plan.title, content)
         except Exception as e:  # noqa: BLE001
-            # 头尾采样兜底：纯头部截断会永久丢失本章结尾关键信息（实体/结局）
-            summary = content[:100] + content[-100:]
+            # 头尾采样兜底：纯头部截断会永久丢失本章结尾关键信息（实体/结局）。
+            # n 随章节长度收缩，避免短章节头尾重叠产生重复内容。
+            n = min(100, max(1, len(content) // 3))
+            summary = content[:n] + content[-n:]
             warnings.append(f"摘要生成失败，已用正文头尾采样兜底: {e}")
 
         self.store.write_chapter(self.dir, plan, content, summary, source="ai")
@@ -480,9 +482,10 @@ class NovelAgent:
             try:
                 tracking = self.track_chapter(chapter_id, verbose=verbose)
             except Exception as e:  # noqa: BLE001
-                warnings.append(f"状态追踪失败，不影响写作: {e}")
+                msg = f"状态追踪失败，不影响写作: {e}"
+                warnings.append(msg)
                 if verbose:
-                    print(f"  [状态追踪失败，不影响写作] {e}")
+                    print(f"  [{msg}]")
 
         review_result: dict[str, Any] | None = None
         if review:
@@ -510,7 +513,9 @@ class NovelAgent:
         result = self.reviewer.review(ctx, ch.content, plan.render_for_prompt()) or {}
         ch.review_note = str(result.get("overall", ""))[:500]
         self.store.write_chapter(
-            self.dir, plan, ch.content, summary=self.store.summaries[chapter_id].summary
+            self.dir, plan, ch.content,
+            summary=self.store.summaries[chapter_id].summary,
+            review_note=ch.review_note,
         )
         # 审校意见存独立字段（review_note），不再追加进摘要，避免污染前情提要
 

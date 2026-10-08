@@ -133,9 +133,11 @@ class Bible(BaseModel):
             if len(base) >= 2 and (base in c.name or c.name in base):
                 return c
         for c in self.characters:
-            given = c.name[-1] if len(c.name) >= 2 else c.name
-            if given in stripped:
-                return c
+            # stripped>=2 防"林"字过宽误配（"林"一字不应触发末字昵称层）
+            if len(stripped) >= 2:
+                given = c.name[-1] if len(c.name) >= 2 else c.name
+                if given in stripped:
+                    return c
         for c in self.characters:
             if c.summary and stripped == c.summary.strip():
                 return c

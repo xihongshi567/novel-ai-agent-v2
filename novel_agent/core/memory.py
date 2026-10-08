@@ -178,13 +178,16 @@ class Memory:
             lines: list[str] = []
             used = 0
             dropped = 0
+            deduped = 0
             for hit in hits:
-                key = f"{hit.doc.ref}:{hit.doc.text[:80]}"
-                if key in seen:
+                # 用 doc.id 去重：同一文档源的不同 chunk id 天然唯一，
+                # 不再靠 text[:80] 误判重复（短前缀撞车会静默丢真不同段）
+                if hit.doc.id in seen:
+                    deduped += 1
                     continue
                 source = hit.doc.ref
                 block = f"【来源:{source} | {hit.doc.title or hit.doc.kind} | 相关度:{hit.score:.2f}】{hit.doc.text}"
-                seen.add(key)
+                seen.add(hit.doc.id)
                 if used + len(block) > self.rag_max_chars:
                     # 预算超限：来源仍记入 retrieved_sources（不静默丢弃），
                     # 文本不注入；截断通过 rag_stats.dropped 显式暴露。
@@ -200,7 +203,8 @@ class Memory:
                 used += len(block)
             rag_text = "\n".join(lines)
             rag_stats = {"hits": len(hits), "injected": len(lines),
-                         "dropped": dropped, "limit_chars": self.rag_max_chars}
+                         "dropped": dropped, "deduped": deduped,
+                         "limit_chars": self.rag_max_chars}
 
         # 连续性约束（伏笔/持有物/承诺/既定事实）——防止长篇崩坏的关键
         continuity_views = adapt_continuity(self.continuity, self.bible, self.world)
