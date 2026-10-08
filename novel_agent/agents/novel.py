@@ -978,13 +978,14 @@ class NovelAgent:
         except Exception:  # noqa: BLE001
             pass
         if not data:
-            return {"parsed": False}
+            return {"parsed": False, "warnings": ["LLM 输出无法解析为 JSON"]}
 
         report: dict[str, Any] = {
             "parsed": True,
             "ideas_added": [],
             "new_elements": [],
             "count_note": data.get("count_note", ""),
+            "warnings": [],
         }
 
         # 1. 写入 ideas（始终写入，这是消化的本职）
@@ -1268,7 +1269,7 @@ class NovelAgent:
         except Exception:
             pass  # noqa: BLE001
         if not data:
-            return {"parsed": False}
+            return {"parsed": False, "warnings": ["LLM 输出无法解析为 JSON"]}
         new_ideas: list[dict[str, Any]] = []
         for it in data.get("new_ideas", []) or []:
             try:
@@ -1304,6 +1305,7 @@ class NovelAgent:
             "new_ideas": new_ideas,
             "connections": data.get("connections", []) or [],
             "fill_notes": data.get("fill_notes", ""),
+            "warnings": [],
         }
 
     # ================ 检查（audit）================
@@ -1332,4 +1334,7 @@ class NovelAgent:
             self.log_usage(op="audit", model="", usage=usage)
         except Exception:
             pass  # noqa: BLE001
-        return data or {"parsed": False}
+        if not data:
+            return {"parsed": False, "warnings": ["LLM 输出无法解析为 JSON"]}
+        # 包一层统一契约：data 是 LLM 输出，不保证有 warnings 字段
+        return {**data, "warnings": []}
