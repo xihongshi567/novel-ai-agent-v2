@@ -188,6 +188,31 @@ class SearchEngine:
             indent=2,
         )
 
+    # ---- 单条增量 upsert/remove（避免全量重建）----
+    def add_doc(self, doc: Doc, *, embedder: EmbeddingBackend | None = None) -> None:
+        """增量添加或替换单条 doc。有 embedder 时单条 embed，无 embedder 时只写文本索引。
+        注意：调用方需负责保持 manifest.sources / doc_count 与持久化文件一致；
+        这是设计上的契约——增量更新不等同于全量重建。
+        """
+        if not doc.text.strip():
+            return
+        self.docs[doc.id] = doc
+        self._save_docs()
+        if embedder is not None:
+            vi = VectorIndex(self.embed_dir, embedder.dim)
+            vec = embedder.embed([doc.text[:1500]])[0]
+            vi.upsert(doc.id, vec)
+
+    def remove_doc(self, doc_id: str) -> None:
+        """增量删除单条 doc。"""
+        if doc_id in self.docs:
+            del self.docs[doc_id]
+            self._save_docs()
+        # 向量索引若存在则同步删（无需 embedder）
+        vi = VectorIndex(self.embed_dir)
+        if doc_id in vi.ids:
+            vi.remove(doc_id)
+
     # ---- 索引构建 ----
     def index_project(
         self,
