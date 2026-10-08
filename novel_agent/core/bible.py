@@ -11,6 +11,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from ._atomic import atomic_write_text
+
 
 class _Entry(BaseModel):
     id: str
@@ -100,8 +102,7 @@ class Bible(BaseModel):
             return cls.model_validate_json(f.read())
 
     def save(self, project_dir: Path) -> None:
-        with open(self.path_of(project_dir), "w", encoding="utf-8") as f:
-            f.write(self.model_dump_json(indent=2))
+        atomic_write_text(self.path_of(project_dir), self.model_dump_json(indent=2))
 
     def all_entries(self) -> list[_Entry]:
         return [

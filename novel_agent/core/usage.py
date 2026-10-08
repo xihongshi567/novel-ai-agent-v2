@@ -11,6 +11,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from ._atomic import atomic_write_json
+
 
 class UsageLog:
     def __init__(self, project_dir: Path) -> None:
@@ -52,8 +54,7 @@ class UsageLog:
             }
         )
         self.dir.mkdir(parents=True, exist_ok=True)
-        with open(self.path, "w", encoding="utf-8") as f:
-            json.dump({"entries": entries}, f, ensure_ascii=False, indent=2)
+        atomic_write_json(self.path, {"entries": entries}, ensure_ascii=False, indent=2)
 
     def estimate_cost(self, entry: dict[str, Any], pricing: dict[str, Any]) -> float:
         """估算单条成本（人民币元）。"""

@@ -17,6 +17,8 @@ import numpy as np
 
 from ..llm.embedding import EmbeddingBackend
 
+from ._atomic import atomic_write_text, atomic_write_json
+
 
 @dataclass
 class Doc:
@@ -68,8 +70,8 @@ class VectorIndex:
     def _save(self) -> None:
         if self.vectors is not None:
             np.save(self.vec_path, self.vectors)
-        self.meta_path.write_text(
-            json.dumps({"ids": self.ids}, ensure_ascii=False), encoding="utf-8"
+        atomic_write_text(
+            self.meta_path, json.dumps({"ids": self.ids}, ensure_ascii=False)
         )
 
     def upsert(self, doc_id: str, vec: list[float]) -> None:
@@ -179,13 +181,11 @@ class SearchEngine:
 
     def _save_docs(self) -> None:
         self.embed_dir.mkdir(parents=True, exist_ok=True)
-        self._index_path.write_text(
-            json.dumps(
-                {"docs": [d.__dict__ for d in self.docs.values()]},
-                ensure_ascii=False,
-                indent=2,
-            ),
-            encoding="utf-8",
+        atomic_write_json(
+            self._index_path,
+            {"docs": [d.__dict__ for d in self.docs.values()]},
+            ensure_ascii=False,
+            indent=2,
         )
 
     # ---- 索引构建 ----
@@ -384,7 +384,7 @@ class SearchEngine:
             "vector_count": len(VectorIndex(self.embed_dir).ids),
             "vector_model": vector_model or (getattr(embedder, "model", "") if embedder else ""),
         }
-        self._manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+        atomic_write_json(self._manifest_path, manifest, ensure_ascii=False, indent=2)
         return counts
 
     # ---- 关键词搜索（零依赖）----

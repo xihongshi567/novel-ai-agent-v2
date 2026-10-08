@@ -436,22 +436,21 @@ class NovelAgent:
         self.store.write_chapter(self.dir, plan, content, summary, source="ai")
         # 保存本章实际使用的上下文来源；旧项目无此文件时不影响既有流程。
         try:
-            import json
+            from ..core._atomic import atomic_write_json
             prov_path = self.dir / "chapters" / "provenance"
             prov_path.mkdir(parents=True, exist_ok=True)
-            (prov_path / f"{chapter_id}.json").write_text(
-                json.dumps({
-                    "chapter_id": chapter_id,
-                    "deterministic_sources": context_bundle.deterministic_sources,
-                    "selected_ideas": context_bundle.selected_ideas,
-                    "ideas": context_bundle.selected_ideas,
-                    "threads": context_bundle.threads,
-                    "retrieved_sources": context_bundle.retrieved_sources,
-                    "constraints": context_bundle.constraints,
-                    "active_constraints": context_bundle.constraints,
-                    "conflicts_detected": context_bundle.conflicts,
-                    "confirmations": context_bundle.confirmations,
-                }, ensure_ascii=False, indent=2), encoding="utf-8")
+            atomic_write_json(prov_path / f"{chapter_id}.json", {
+                "chapter_id": chapter_id,
+                "deterministic_sources": context_bundle.deterministic_sources,
+                "selected_ideas": context_bundle.selected_ideas,
+                "ideas": context_bundle.selected_ideas,
+                "threads": context_bundle.threads,
+                "retrieved_sources": context_bundle.retrieved_sources,
+                "constraints": context_bundle.constraints,
+                "active_constraints": context_bundle.constraints,
+                "conflicts_detected": context_bundle.conflicts,
+                "confirmations": context_bundle.confirmations,
+            }, ensure_ascii=False, indent=2)
         except Exception as e:
             warnings.append(f"溯源文件写入失败: {e}")
         plan.status = ChapterStatus.drafted
@@ -656,8 +655,9 @@ class NovelAgent:
         return "\n".join(lines)
 
     def export_to_file(self, path: str | Path | None = None) -> Path:
+        from ..core._atomic import atomic_write_text
         path = Path(path) if path else self.dir / f"{self.project.name}_全文.md"
-        path.write_text(self.export_markdown(), encoding="utf-8")
+        atomic_write_text(path, self.export_markdown())
         return path
 
     # ---------------- 工具 ----------------

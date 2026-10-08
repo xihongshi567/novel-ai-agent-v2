@@ -4,6 +4,7 @@ import uuid
 import json, time
 from pathlib import Path
 from .constraints import ConstraintView
+from ._atomic import atomic_write_json
 
 @dataclass
 class ConflictReport:
@@ -16,7 +17,7 @@ class ConflictReport:
 
     def save(self, project_dir: Path):
         p=project_dir/"continuity"/"conflicts"; p.mkdir(parents=True,exist_ok=True)
-        (p/f"{self.conflict_id}.json").write_text(json.dumps(asdict(self),ensure_ascii=False,indent=2),encoding="utf-8")
+        atomic_write_json(p/f"{self.conflict_id}.json", asdict(self), ensure_ascii=False, indent=2)
     @classmethod
     def load(cls, project_dir: Path, conflict_id: str):
         p=project_dir/"continuity"/"conflicts"/f"{conflict_id}.json"
@@ -27,7 +28,7 @@ class ConfirmationRecord:
     id: str; conflict_id: str; action: str; timestamp: float; author: str = "user"; note: str = ""
     def save(self, project_dir: Path):
         p=project_dir/"continuity"/"confirmations"; p.mkdir(parents=True,exist_ok=True)
-        (p/f"{self.id}.json").write_text(json.dumps(asdict(self),ensure_ascii=False,indent=2),encoding="utf-8")
+        atomic_write_json(p/f"{self.id}.json", asdict(self), ensure_ascii=False, indent=2)
     @classmethod
     def load(cls, project_dir: Path, record_id: str):
         p=project_dir/"continuity"/"confirmations"/f"{record_id}.json"
@@ -63,7 +64,7 @@ def save_governance_state(project_dir: Path, constraints, conflicts=None, confir
     state={"constraints": {c.id: {"status": c.status, "supersedes": list(c.supersedes)} for c in constraints},
            "conflicts": [asdict(x) for x in (conflicts or load_conflicts(project_dir))],
            "confirmations": [asdict(x) for x in (confirmations or load_confirmations(project_dir))]}
-    (p/"governance.json").write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_write_json(p/"governance.json", state, ensure_ascii=False, indent=2)
 
 def detect_conflicts(constraints: list[ConstraintView]) -> list[ConflictReport]:
     out=[]

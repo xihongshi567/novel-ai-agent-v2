@@ -11,6 +11,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from ._atomic import atomic_write_json, atomic_write_text
+
 from .outline import ChapterPlan
 
 
@@ -76,15 +78,12 @@ class ChapterStore(BaseModel):
         )
 
     def save(self, project_dir: Path) -> None:
-        import json
-
         self.chapters_dir(project_dir).mkdir(parents=True, exist_ok=True)
         data = {
             "summaries": {k: v.model_dump() for k, v in self.summaries.items()},
             "review_notes": dict(self.review_notes),
         }
-        with open(self.summaries_path(project_dir), "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        atomic_write_json(self.summaries_path(project_dir), data, ensure_ascii=False, indent=2)
 
     # ---- 操作 ----
     def write_chapter(
@@ -119,8 +118,7 @@ class ChapterStore(BaseModel):
             content=content,
             word_count=wc,
         )
-        with open(cur_path, "w", encoding="utf-8") as f:
-            f.write(ch.render_markdown())
+        atomic_write_text(cur_path, ch.render_markdown())
         # 头尾采样兜底：n 随长度收缩，避免短章节头尾重叠
         n = min(100, max(1, len(content) // 3))
         fallback_summary = content[:n] + content[-n:]
@@ -151,7 +149,7 @@ class ChapterStore(BaseModel):
         vdir.mkdir(parents=True, exist_ok=True)
         existing = self.list_versions(project_dir, cid)
         n = len(existing) + 1
-        (vdir / f"{cid}.v{n}.md").write_text(text, encoding="utf-8")
+        atomic_write_text(vdir / f"{cid}.v{n}.md", text)
 
     def _log_version_meta(
         self, project_dir: Path, cid: str, word_count: int, source: str
@@ -176,9 +174,7 @@ class ChapterStore(BaseModel):
                 "is_current": False,
             }
         )
-        meta_path.write_text(
-            json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        atomic_write_json(meta_path, meta, ensure_ascii=False, indent=2)
 
     def list_versions(self, project_dir: Path, cid: str) -> list[dict]:
         """返回某章的版本历史（不含当前版）。"""
@@ -222,7 +218,7 @@ class ChapterStore(BaseModel):
             self._archive_version(
                 project_dir, cid, cur_path.read_text(encoding="utf-8")
             )
-        cur_path.write_text(target.render_markdown(), encoding="utf-8")
+        atomic_write_text(cur_path, target.render_markdown())
         self._log_version_meta(project_dir, cid, target.word_count, "rollback")
         if cid in self.summaries:
             self.summaries[cid].word_count = target.word_count

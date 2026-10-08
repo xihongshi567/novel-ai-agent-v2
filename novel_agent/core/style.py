@@ -9,6 +9,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from ._atomic import atomic_write_text
+
 
 class StyleData(BaseModel):
     project: str = ""
@@ -34,8 +36,7 @@ class StyleData(BaseModel):
         import time as _t
 
         self.updated_at = _t.time()
-        with open(self.path_of(project_dir), "w", encoding="utf-8") as f:
-            f.write(self.model_dump_json(indent=2))
+        atomic_write_text(self.path_of(project_dir), self.model_dump_json(indent=2))
 
     def render_for_prompt(self) -> str:
         parts: list[str] = []

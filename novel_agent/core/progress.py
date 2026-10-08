@@ -8,6 +8,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from ._atomic import atomic_write_text
+
 
 class ProgressData(BaseModel):
     project: str = ""
@@ -32,8 +34,7 @@ class ProgressData(BaseModel):
 
     def save(self, project_dir: Path) -> None:
         self.updated_at = time.time()
-        with open(self.path_of(project_dir), "w", encoding="utf-8") as f:
-            f.write(self.model_dump_json(indent=2))
+        atomic_write_text(self.path_of(project_dir), self.model_dump_json(indent=2))
 
     def record_today(self, words_added: int) -> None:
         day = time.strftime("%Y-%m-%d")

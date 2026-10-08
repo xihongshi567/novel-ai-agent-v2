@@ -11,6 +11,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from ._atomic import atomic_write_text
+
 
 class Manifesto(BaseModel):
     project: str = ""
@@ -48,8 +50,7 @@ class Manifesto(BaseModel):
 
     def save(self, project_dir: Path) -> None:
         self.updated_at = time.time()
-        with open(self.path_of(project_dir), "w", encoding="utf-8") as f:
-            f.write(self.model_dump_json(indent=2))
+        atomic_write_text(self.path_of(project_dir), self.model_dump_json(indent=2))
 
     def is_empty(self) -> bool:
         return not any(

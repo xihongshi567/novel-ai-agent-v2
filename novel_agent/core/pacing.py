@@ -11,6 +11,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from ._atomic import atomic_write_text
+
 
 class Pace(str, Enum):
     fast = "fast"  # 快节奏：动作密集、冲突强
@@ -55,8 +57,7 @@ class PacingData(BaseModel):
             return cls.model_validate_json(f.read())
 
     def save(self, project_dir: Path) -> None:
-        with open(self.path_of(project_dir), "w", encoding="utf-8") as f:
-            f.write(self.model_dump_json(indent=2))
+        atomic_write_text(self.path_of(project_dir), self.model_dump_json(indent=2))
 
     def ordered(self) -> list[ChapterPacing]:
         """按章节 id 排序。"""

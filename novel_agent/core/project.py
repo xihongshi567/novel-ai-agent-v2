@@ -9,6 +9,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from ._atomic import atomic_write_text
+
 # 项目根目录
 PROJECTS_ROOT = Path(__file__).resolve().parent.parent.parent / "projects"
 
@@ -53,8 +55,7 @@ class Project(BaseModel):
         self.updated_at = time.time()
         self.dir.mkdir(parents=True, exist_ok=True)
         (self.dir / "chapters").mkdir(exist_ok=True)
-        with open(self.dir / "project.json", "w", encoding="utf-8") as f:
-            f.write(self.model_dump_json(indent=2))
+        atomic_write_text(self.dir / "project.json", self.model_dump_json(indent=2))
 
     def ensure_dirs(self) -> None:
         self.dir.mkdir(parents=True, exist_ok=True)
