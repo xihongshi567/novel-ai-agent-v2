@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import time
 import difflib
+import threading
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -32,6 +33,11 @@ from ..core.usage import UsageLog
 from ..core.pacing import PacingData
 from ..core.manifesto import Manifesto
 from ..core.search import SearchEngine
+
+
+class WriteChapterCancelled(RuntimeError):
+    """write_chapter 被 cancel_event 触发时抛出。RuntimeError 子类,
+    调用方可以单独捕获处理(清理半成品),也可以不捕获让异常冒泡。"""
 from ..core.usage import UsageLog
 from ..core.pacing import PacingData
 from ..core.search import SearchEngine
@@ -387,9 +393,21 @@ class NovelAgent:
         return ch
 
     def write_chapter(
-        self, chapter_id: str, *, review: bool | None = None, verbose: bool = False
+        self, chapter_id: str, *, review: bool | None = None, verbose: bool = False,
+        cancel_event: threading.Event | None = None,
     ) -> dict[str, Any]:
-        """写指定章节：组装上下文 → 生成正文 → 存盘 → (可选)审校。"""
+        """写指定章节：组装上下文 → 生成正文 → 存盘 → (可选)审校。
+
+        cancel_event: 外部可注入的取消信号。每个 LLM 调用前/后检查,
+        触发后 plan.status 回退 pending 并抛 WriteChapterCancelled
+        (RuntimeError 子类),调用方能 catch 处理半成品,也能直接让异常冒泡。
+        """
+        def _check_cancel(where: str) -> None:
+            if cancel_event is not None and cancel_event.is_set():
+                plan.status = ChapterStatus.pending
+                self.save_all()
+                raise WriteChapterCancelled(f"write_chapter({chapter_id}) 在 {where} 被取消")
+
         plan = self.outline.find(chapter_id)
         if plan is None:
             raise ValueError(f"大纲里没有章节 {chapter_id}")
@@ -397,6 +415,7 @@ class NovelAgent:
         plan.status = ChapterStatus.writing
         self.save_all()
 
+        _check_cancel("状态置为 writing 后")
         context_bundle = self._memory().build_context_bundle(chapter_id)
         ctx = context_bundle.text
 
@@ -404,12 +423,16 @@ class NovelAgent:
         content = ""
         last_err = None
         for attempt in range(self.max_retries + 1):
+            _check_cancel(f"重试前 attempt={attempt}")
             try:
                 content = self.writer.write_chapter(
                     ctx, plan.word_target or self.chapter_words, chapter_id=chapter_id
                 )
+                _check_cancel(f"LLM 返回后 attempt={attempt}")
                 if len(content) > 50:
                     break
+            except WriteChapterCancelled:
+                raise
             except Exception as e:  # noqa: BLE001
                 last_err = e
                 if verbose:
@@ -424,6 +447,7 @@ class NovelAgent:
         content = self._strip_self_title(content)
 
         # 生成摘要
+        _check_cancel("摘要前")
         warnings: list[str] = []
         try:
             summary = self.writer.summarize(chapter_id, plan.title, content)
@@ -433,6 +457,7 @@ class NovelAgent:
             n = min(100, max(1, len(content) // 3))
             summary = content[:n] + content[-n:]
             warnings.append(f"摘要生成失败，已用正文头尾采样兜底: {e}")
+        _check_cancel("摘要后")
 
         self.store.write_chapter(self.dir, plan, content, summary, source="ai")
         # 保存本章实际使用的上下文来源；旧项目无此文件时不影响既有流程。
