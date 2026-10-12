@@ -261,21 +261,29 @@ class FeishuBot:
 
     # ============ 发送消息 ============
     def send_text(self, chat_id: str, text: str) -> bool:
-        """给指定 chat 发文本消息，自动分段。"""
+        """给指定 chat 发消息，自动分段。
+
+        用 interactive 卡片 + markdown 元素：飞书 text 消息类型不解析
+        Markdown，只有卡片 markdown 元素会渲染粗体/列表/行内代码等。
+        """
         if not chat_id:
             return False
         # 分段发送
         chunks = self._split(text, self.max_chars)
         for chunk in chunks:
             try:
+                card = {
+                    "config": {"wide_screen_mode": True},
+                    "elements": [{"tag": "markdown", "content": chunk}],
+                }
                 req = (
                     CreateMessageRequest.builder()
                     .receive_id_type("chat_id")
                     .request_body(
                         CreateMessageRequestBody.builder()
                         .receive_id(chat_id)
-                        .msg_type("text")
-                        .content(json.dumps({"text": chunk}))
+                        .msg_type("interactive")
+                        .content(json.dumps(card))
                         .build()
                     )
                     .build()
